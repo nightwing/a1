@@ -1,0 +1,550 @@
+<script src="https://www.unpkg.com/ace-builds@latest/src-noconflict/ace.js"></script>
+<div id="container">
+    <div id="sidePanel"></div>
+    <div id='example'></div>
+</div>
+<style>
+    #container {
+        display: flex;
+        height: 100%;
+        align-items: stretch;
+    }
+
+    #example {
+        flex: 1;
+    }
+
+    #sidePanel {
+        background: rebeccapurple;
+        overflow: auto;
+    }
+</style>
+<script>
+var editor = ace.edit("example", {
+    theme: "ace/theme/textmate",
+    mode: "ace/mode/latex",
+    value: "console.log('Hello world');"
+});
+
+function findNext(eqreg, excludeRe) {
+    value = editor.getValue()
+
+    if (excludeRe) {
+        value = value.replace(excludeRe, function(_) {
+            return " ".repeat(_.length)
+        })
+    }
+
+    lastIndex = editor.session.doc.positionToIndex(editor.selection.getRange().end) 
+
+    eqreg.lastIndex = lastIndex
+
+    match = eqreg.exec(value)
+    lastIndex = eqreg.lastIndex
+
+    if (!match) match = {index: 0, 0: "", fake: true};
+
+    start = editor.session.doc.indexToPosition(match.index) 
+    end = editor.session.doc.indexToPosition(match.index + match[0].length) 
+    editor.selection.setRange({start, end})
+
+    editor.renderer.scrollCursorIntoView(null, 0.5)
+
+    return !match.fake;
+}
+
+var eqReg = / *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([\s,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))/g 
+var sectionReg = /^(\d+(?:\.[\d.]*)?)(.*)/gm
+
+var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
+var inlineEqStartReg=/^(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+
+var sidePanel = document.getElementById("sidePanel")
+if (!sidePanel) {
+    sidePanel = document.createElement("div")
+    sidePanel.id="sidePanel"
+    document.body.appendChild(sidePanel)
+    sidePanel.style.cssText="    position: absolute;    background: beige;"
+}
+sidePanel.innerHTML = ""
+if (!window.dom) dom = ace.require("ace/lib/dom")
+
+//editor = document.querySelector(".ace_editor").env.editor
+
+dom.buildDom([["button", {onclick: function() {
+       
+       initialize()
+       editor.focus() 
+    }}, "initialize"],   
+    // "        ",
+    
+    // ["button", {
+    //     style: "float: right",
+    //     onclick: function() {
+    //       sidePanel.remove()
+    //       editor.focus()
+    //     }
+    // }, "x"],
+    ["hr"],
+    ["button", {onclick: function() {
+       
+        var line = editor.getSelectedText()
+        sectionReg.lastIndex = 0
+        var match = sectionReg.exec(line)
+        var number = match[1] 
+        var caption = match[2].trim()
+
+        editor.insert(`\\section{ ${caption} }\n`+`\\label{part${number}}\n`)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+       editor.focus()
+
+        // findNext(sectionReg)
+    }}, "section"],
+    ["button", {onclick: function() {
+       findNext(sectionReg)
+       editor.focus()
+    }}, "next"],
+
+
+
+    
+    ["br"],
+
+
+    ["button", {onclick: function() {
+        var line = editor.getSelectedText()
+        eqReg.lastIndex = 0
+        var match = eqReg.exec(line)
+        var number = "eq" + match[3].replace(/[()]/g, "") .replace(/[\.]/g, "_")
+        var punct = match[2].trim()
+        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+        var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
+        console.log(replacement)
+
+         editor.insert(replacement)
+         editor.renderer.scrollCursorIntoView(null, 0.5)
+       editor.focus()
+         
+    }}, "numbered equation"],
+
+    ["button", {onclick: function() {
+       findNext(eqReg)
+       editor.focus()
+    }}, "next"],
+
+    ["br"],
+
+     ["button", {onclick: function() {
+        var line = editor.getSelectedText()
+         
+
+        var replacement = `\\begin{subequations}\n${line}\n\\end{subequations}`
+        console.log(replacement)
+
+         editor.insert(replacement)
+         editor.renderer.scrollCursorIntoView(null, 0.5)
+       editor.focus()
+         
+    }}, "subequations"],    
+    ["button", {onclick: function() {
+        findNext(/eq\d+_\d+_\d+[^\d\}]+/g, /\\begin{subequations[\s\S]*?\\end{subequations/g)
+        editor.focus()         
+    }}, "next"],
+    ["br"],
+
+
+    ["button", {onclick: function() {
+        var line = editor.getSelectedText()
+        inlineEqReg.lastIndex = 0
+        var match = inlineEqReg.exec(line)
+
+        var punct = match[2].trim()
+        
+        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+        var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` 
+         editor.insert(replacement)
+         editor.renderer.scrollCursorIntoView(null, 0.5)
+       editor.focus()
+         
+    }}, "display"],
+    
+    ["button", {onclick: function() {
+        var line = editor.getSelectedText()
+        inlineEqReg.lastIndex = 0
+        var match = inlineEqReg.exec(line)
+        var punct = match[2].trim()
+        
+        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+        var replacement = ` $${eq}$` + punct + " "
+         editor.insert(replacement)
+         editor.renderer.scrollCursorIntoView(null, 0.5)
+       editor.focus()
+         
+    }}, "inline"],
+
+    ["button", {onclick: function() {
+       findNext(inlineEqReg)
+       editor.focus()
+    }}, "next"],
+
+    ["br"],
+
+    ["button", {onclick: function() {
+       findNext(inlineEqStartReg)
+       editor.focus()
+    }}, "next broken"],
+    ["button", {onclick: function() {
+       findNext(/^\s*\(\d+\.\d+\.\d+\w*\)\s*$/gmi)
+       editor.focus()
+    }}, "next empty"],
+
+    ["br"],
+
+    ["button", {onclick: function() {
+        
+        var figureRe = /(?<!\\)\b(sh|ch|exp)\b/g
+        var line = editor.getSelectedText()  
+        
+        var match = figureRe.exec(line)
+        var figName = match[1]  
+
+        var replacement = "\\" + figName
+
+        
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+         
+
+        editor.focus()
+    }}, "sh|ch"],
+    
+    ["button", {onclick: function() {
+       findNext(/(?<!(?:\\|\\operatorname\{))\b(sh|ch|exp)\b/g)
+       editor.focus()
+    }}, "next"],
+    
+    ["br"],
+
+     ["button", {onclick: function() {
+       findNext(inlineEqStartReg)
+       editor.focus()
+    }}, "check eq refs"],
+    ["br"],
+     ["button", {onclick: function() {
+       findNext(/[^\x00-\xff\s]/g)
+       editor.focus()
+    }}, "next non-english"],
+    ["br"],
+     ["button", {onclick: function() {
+        do {
+            findNext(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*\S)/g)
+
+            var text = editor.getSelectedText()
+        } while(text && !/^(\. *\n)/.test(text))
+
+       editor.focus()
+    }}, "next paragraph"],
+
+
+    ["br"],
+
+    ["button", {onclick: function() { 
+        var line = editor.getSelectedText()
+        var match = /TABLE ([\d.]+)(.*)([\s\S]*)/g.exec(line)
+        var number = match[1].trim().replace(/\./g, "_").trim()
+        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "")
+        var tabular = match[3]
+        
+        var rows = tabular.trim().split("\n");
+         var l 
+         rows.forEach(function(x) {
+             if (l == null) l = x.split("\t").length
+         })
+
+         tabular = "\\begin{tabular}{|" +  "c| ".repeat(l) + "}\\hline \n"  
+            + rows.map(x=>x.replace(/\t/g, " & ")).join("\\\\ \\hline \n")
+            + "\\\\ \\hline \n \\end{tabular}"
+
+        var replacement = `\\begin{table}[!h]
+\\centering
+\\caption{
+${caption}
+}
+\\label{tab:${number}}
+
+${tabular}
+\\end{table}`
+
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "table"],
+
+     ["button", {onclick: function() {
+        // (\\begin{tabular[\s\S]*?\\end{tabular})
+        findNext(/(?:(?:\\noindent\s*)?\\textbf{)?[\t ]*TABLE ([\d.]+)([\S\s]*?)/g)
+        editor.focus()
+    }}, "next"],
+
+
+
+    ["br"],
+
+    ["button", {onclick: function() {
+        var figureRe = /FIGURE\s*([\d.]+\w?)(.*)/i
+        var line = editor.getSelectedText().replace(/\n/g, " ")
+        var match = figureRe.exec(line)
+        var number = match[1].trim().replace(/\./g, "_").trim()
+        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
+
+        if (figureRe.test(caption)) {
+            var match2 = figureRe.exec(caption)
+            var number2 = match2[1].trim().replace(/\./g, "_").trim()
+            var caption2 =  match2[2].trim().replace(/^}|\\textbf{}/g, "").trim()
+            caption = caption.slice(0, match2.index).trim()
+
+            var pageType = /[^\d]$/.test(number) ? "subfigure" : "minipage"
+    
+            var replacement = `\\begin{figure}[h]
+\\centering
+\\begin{${pageType}}{.45\\textwidth}
+  \\centering
+  \\includegraphics[width=.9\\linewidth]{fig_${number}.eps}
+  \\caption{ ${caption} }
+  \\label{fig_${number}}
+\\end{${pageType}}
+\\begin{${pageType}}{.45\\textwidth}
+  \\centering
+  \\includegraphics[width=.9\\linewidth]{fig_${number2}.eps}
+  \\caption{ ${caption2} }
+  \\label{fig_${number2}}
+\\end{${pageType}}
+\\end{figure}`
+         } else {
+         
+        var replacement = `\\begin{figure}[h]
+    \\centering
+    \\includegraphics[scale=.4]{fig_${number}.eps}
+    \\caption{ ${caption} }
+    \\label{fig_${number}}
+\\end{figure}`
+        }
+
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "figure"],
+
+    ["button", {onclick: function() {
+        findNext(/(FIG(URES?|\.)?|TABLES?)\s*[\d\.]+[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
+        editor.focus()
+    }}, "next"],
+    ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
+    ["button", {onclick: function() {
+        
+        var figureRe = /(FIG(?:URES?|\.)?|TABLES?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/i
+        var line = editor.getSelectedText().replace(/\n/g, " ")
+        if (line.slice(-1) == ".") {
+            line = line.slice(0,-1)
+            var r = editor.selection.getRange(); r.end.column--; editor.selection.setRange(r) 
+        }
+        
+        var match = figureRe.exec(line)
+        var figName = match[1]
+        var number = match[2].trim().replace(/\./g, "_").trim()
+        var link = match[3]
+        var number2 = (match[4] || "").trim().replace(/\./g, "_").trim()
+
+        var replacement = figName + " \\ref{fig_" + number + "}"
+
+        if (number2) replacement += (link == "-" ? "-" : link == ","? ", " : " " + link + " ") + "\\ref{fig_" + number2 + "}"
+        
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+         
+
+        editor.focus()
+    }}, "ref"],
+
+    ["br"],
+    ["button", {onclick: function() {
+        var line = editor.getSelectedText()
+        var match = /\[([\d\,\-\s]*)\]/g.exec(line)
+        var books = match[1].replace(/\s+/g, "").replace(/(\d+)-(\d+)/g, function(_, a, b) {
+            a = parseInt(a)
+            b = parseInt(b)
+            if (a > b) throw a
+            var r = [] 
+            for (var  i = a; i <= b; i++) {
+                r.push(i)
+            }
+            return r.join(",") 
+        } ).replace(/\d+/g, x=>"book" + x)
+        var replacement = "\\cite{" + books +"}"
+
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        
+       editor.focus()
+    }}, "cite"],
+
+
+    ["button", {onclick: function() {        
+        findNext(/\[[\d\,\-\s]*\]/g,  /\\begin{equation[\s\S]*?\\end{equation|\$[^$]+\$/g)
+        editor.focus()
+    }}, "next"],
+
+    ["br"],
+
+    ["button", {onclick: function() {
+        replaceBibItem()
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        
+        editor.focus()
+    }}, "bibitem"],
+
+    ["button", {onclick: function() {
+        findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)
+        editor.focus()
+    }}, "next"],
+    " \xa0 \xa0 \xa0 \xa0 \xa0 \xa0 ",
+    ["button", {onclick: function() {
+        while (findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)) {
+            replaceBibItem();
+        }
+        findNext(/n{thebibliography}/)
+        editor.focus();
+    }}, "all"],
+
+], sidePanel)
+
+function replaceBibItem() {
+    var line = editor.getSelectedText()
+    var replacement = line.replace(/\n+(\d+)\.?/gm, function(_, number) {
+        return "\n\n\\bibitem{book" + number +"}\n"
+    });
+    
+    editor.insert(replacement)
+}
+
+function initialize() {
+    var v=editor.getValue();
+    var v1=v.replace(/’/g, "'").replace(/β/g, '$\beta$')
+
+    v1 = v1.replace(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*[^\s}\])$])/g, function(a,_,b) { if(b) return b + "\n"; return a })
+    v1 = v1.replace(/{align}/g, "{aligned}")
+    v1 = v1.replace(/а/g, "a")
+    v1 = v1.replace(/–/g, "--")
+    v1 = v1.replace(/[“”]/g, '"')
+
+
+    if (!/begin\{document}/.test(v1)) {
+        v1=`\\documentclass[12pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{amsmath}
+\\usepackage{amsfonts}
+\\usepackage{amssymb}
+\\usepackage{graphicx}
+
+
+  
+\\usepackage{caption}
+\\captionsetup[figure]{font=scriptsize}
+\\captionsetup[figure]{font=footnotesize}
+
+
+% \\renewcommand{\\theequation}{\\thesection.{\\arabic{equation}}}
+
+
+\\begin{document}
+
+
+\\begin{center}\\Large{\\textbf{  
+    TITLE    
+} }\\end{center}
+
+\\begin{center}\\Large{g, MI 49759, USA}}, \\Large{AUTHOR NAME} \\end{center}
+
+${v1}
+
+\\end{document}
+`
+    }
+
+    if (v!=v1) editor.setValue(v1)
+}
+
+function convertNumbers() {
+    var v = editor.getValue();
+    var re = /\\label{eq([\d_\w]*)}/g
+    var results = {}
+    var m
+    while ((m = re.exec(v))) {
+        results[m[1]] = 1
+    }
+    //\eqref
+    results
+
+    var v1 = v.replace(/\(\d+\.\d+\.\d+\w*\)/g, function(e) {
+        var e1 = e.slice(1, -1).replace(/\./g, "_");
+        if (!results[e1]) {
+            console.log(e1)
+            return e
+        }
+        return `\\eqref{eq${e1}}`
+    })
+    if (v1 != v) editor.setValue(v1)
+
+}
+
+function fixBibliography() {
+    var newValue = editor.getValue() .replace(/(\\bibitem{book\d+}\s*)([^\d\\\n]+)(\d{4}\b).?\s*/g, function(_, intro, names, number) {
+
+        var newNames = names.replace(/([^\s,.]+),?\s+(\w{1,3}\.(\s*\w{1,3}\.)*)/g, function(_, x1, x2) {
+            return x1 + " " + x2.replace(/[\s.]/g, "")
+        }).trim()
+        console.log(newNames)
+
+
+        return intro + newNames + " (" + number + ") "
+
+    })
+    editor.setValue(newValue)
+}
+
+
+
+value = "\\bibitem{book19}\n\
+	Uflyand, Ya.1968. Integral Transformations in Problems of the Elasticity Theory. Leningrad. Nauka. 402 (in Russian).   \
+"
+
+value.replace(/(\\bibitem{book\d+}\s*)([^\d\\\n]+)(\d+).?\s*/g, function(_, intro, names, number) {
+ 
+   /* var parts = names.split(",")
+    var newNames = []
+    for (var i = 0; i< parts.length; i++) {
+        var lastName = parts[i].trim() 
+        var initials = parts[i + 1].replace(/[\s\.]/g, "")
+        i++
+        newNames.push(lastName + " " + initials)
+    }
+        */
+
+    var newNames = names.replace(/([^\s,.]+),?\s+(\w{1,3}\.(\s*\w{1,3}\.)*)/g, function(_, x1, x2) {
+        return x1 + " " + x2.replace(/[\s.]/g, "")
+    }).trim()
+    console.log(newNames)
+    
+     
+    return intro + newNames + " (" + number + ") " 
+    
+})
+
+
+</script>
