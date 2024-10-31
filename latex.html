@@ -1,7 +1,34 @@
-<script src="https://www.unpkg.com/ace-builds@latest/src-noconflict/ace.js"></script>
+<script src="https://ace.c9.io/build/src/ace.js"></script>
 <div id="container">
     <div id="sidePanel"></div>
-    <div id='example'></div>
+    <div id='example'>
+Example
+
+
+\[{{\gamma }_{1}}=\frac{1}{2\pi }\arg ,\] (1.1)
+
+
+Fig. 1 some text
+Figure. 2 more text
+
+paragraph 1 (1.1) 
+
+paragraph 2 $eq$
+
+Fig 3 description
+
+
+${{\gamma }_{1}}=\frac{1}{2\pi }\arg ,$ (1.2)
+
+
+References
+
+1. Galin L.A. Contact problems of the theory of elasticity and viscoelasticity.-M.: Nauka, 1980.- 304 p. (In Russian)
+
+2. Shtaerman I.Ya. Contact problem of elasticity theory. - M.-L.: Gostekhteorizdat, 1947 - 270 p. (In Russian)
+		
+		
+	</div>
 </div>
 <style>
     #container {
@@ -23,7 +50,7 @@
 var editor = ace.edit("example", {
     theme: "ace/theme/textmate",
     mode: "ace/mode/latex",
-    value: "console.log('Hello world');"
+    wrap: true
 });
 
 function findNext(eqreg, excludeRe) {
@@ -56,6 +83,9 @@ function findNext(eqreg, excludeRe) {
 var eqReg = / *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([\s,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))/g 
 var sectionReg = /^(\d+(?:\.[\d.]*)?)(.*)/gm
 
+var numberReg =/(\(\d+(?:\.[\d.]*)?\w*\))/g 
+var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
+
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
 var inlineEqStartReg=/^(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
 
@@ -71,10 +101,24 @@ if (!window.dom) dom = ace.require("ace/lib/dom")
 
 //editor = document.querySelector(".ace_editor").env.editor
 
-dom.buildDom([["button", {onclick: function() {
+
+function replaceNumberedEquation() {
+	var line = editor.getSelectedText()
+	eqReg.lastIndex = 0
+	var match = eqReg.exec(line)
+	var number = "eq" + match[3].replace(/[()]/g, "") .replace(/[\.]/g, "_")
+	var punct = match[2].trim()
+	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+	var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
+	editor.insert(replacement)
+}
+
+dom.buildDom([
+"div", {onclick: ()=> editor.focus()},	
+["button", {onclick: function() {
        
        initialize()
-       editor.focus() 
     }}, "initialize"],   
     // "        ",
     
@@ -108,22 +152,15 @@ dom.buildDom([["button", {onclick: function() {
 
 
     
+    ["hr"],
+	"Equations",
+
     ["br"],
 
-
     ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-        eqReg.lastIndex = 0
-        var match = eqReg.exec(line)
-        var number = "eq" + match[3].replace(/[()]/g, "") .replace(/[\.]/g, "_")
-        var punct = match[2].trim()
-        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
-
-        var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
         console.log(replacement)
-
-         editor.insert(replacement)
-         editor.renderer.scrollCursorIntoView(null, 0.5)
+		replaceNumberedEquation() 
+        editor.renderer.scrollCursorIntoView(null, 0.5)
        editor.focus()
          
     }}, "numbered equation"],
@@ -132,27 +169,17 @@ dom.buildDom([["button", {onclick: function() {
        findNext(eqReg)
        editor.focus()
     }}, "next"],
+	"           ",
 
-    ["br"],
-
-     ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-         
-
-        var replacement = `\\begin{subequations}\n${line}\n\\end{subequations}`
-        console.log(replacement)
-
-         editor.insert(replacement)
-         editor.renderer.scrollCursorIntoView(null, 0.5)
-       editor.focus()
-         
-    }}, "subequations"],    
     ["button", {onclick: function() {
-        findNext(/eq\d+_\d+_\d+[^\d\}]+/g, /\\begin{subequations[\s\S]*?\\end{subequations/g)
-        editor.focus()         
-    }}, "next"],
-    ["br"],
+		editor.selection.moveTo(0, 0)
+		var max = 1000
+       	while(findNext(eqReg) && max-- >0) {
+			replaceNumberedEquation() 
+		}
+    }}, "all"],
 
+    ["br"],
 
     ["button", {onclick: function() {
         var line = editor.getSelectedText()
@@ -203,36 +230,67 @@ dom.buildDom([["button", {onclick: function() {
 
     ["br"],
 
-    ["button", {onclick: function() {
-        
-        var figureRe = /(?<!\\)\b(sh|ch|exp)\b/g
-        var line = editor.getSelectedText()  
-        
-        var match = figureRe.exec(line)
-        var figName = match[1]  
 
-        var replacement = "\\" + figName
+	["button", {onclick: function() {
+       
+	   convertNumbers()
+	  	editor.focus() 
+   	}}, "convert numbers to refs"],  
 
-        
-        editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        editor.focus()
+
+	["hr"]
+    //  ["button", {onclick: function() {
+    //     var line = editor.getSelectedText()
          
 
-        editor.focus()
-    }}, "sh|ch"],
-    
-    ["button", {onclick: function() {
-       findNext(/(?<!(?:\\|\\operatorname\{))\b(sh|ch|exp)\b/g)
-       editor.focus()
-    }}, "next"],
-    
+    //     var replacement = `\\begin{subequations}\n${line}\n\\end{subequations}`
+    //     console.log(replacement)
+
+    //      editor.insert(replacement)
+    //      editor.renderer.scrollCursorIntoView(null, 0.5)
+    //    editor.focus()
+         
+    // }}, "subequations"],    
+    // ["button", {onclick: function() {
+    //     findNext(/eq\d+_\d+_\d+[^\d\}]+/g, /\\begin{subequations[\s\S]*?\\end{subequations/g)
+    //     editor.focus()         
+    // }}, "next"],
     ["br"],
 
-     ["button", {onclick: function() {
-       findNext(inlineEqStartReg)
-       editor.focus()
-    }}, "check eq refs"],
+
+
+
+
+    // ["button", {onclick: function() {
+        
+    //     var figureRe = /(?<!\\)\b(sh|ch|exp)\b/g
+    //     var line = editor.getSelectedText()  
+        
+    //     var match = figureRe.exec(line)
+    //     var figName = match[1]  
+
+    //     var replacement = "\\" + figName
+
+        
+    //     editor.insert(replacement)
+    //     editor.renderer.scrollCursorIntoView(null, 0.5)
+    //     editor.focus()
+         
+
+    //     editor.focus()
+    // }}, "sh|ch"],
+    
+    // ["button", {onclick: function() {
+    //    findNext(/(?<!(?:\\|\\operatorname\{))\b(sh|ch|exp)\b/g)
+    //    editor.focus()
+    // }}, "next"],
+    
+    // ["br"],
+
+    //  ["button", {onclick: function() {
+    //    findNext(inlineEqStartReg)
+    //    editor.focus()
+    // }}, "check eq refs"],
     ["br"],
      ["button", {onclick: function() {
        findNext(/[^\x00-\xff\s]/g)
@@ -420,6 +478,8 @@ ${tabular}
         findNext(/n{thebibliography}/)
         editor.focus();
     }}, "all"],
+
+	["hr"],
 
 ], sidePanel)
 
