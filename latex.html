@@ -2,16 +2,17 @@
 <div id="container">
     <div id="sidePanel"></div>
     <div id='example'>
+
 Example
 
 
 \[{{\gamma }_{1}}=\frac{1}{2\pi }\arg ,\] (1.1)
 
 
-Fig. 1 some text
+Fig. 1 some text \[\int_L dL\]
 Figure. 2 more text
 
-paragraph 1 (1.1) 
+paragraph \[\int_L dL\] 1 \[\int_L dL\] (1.1) 
 
 paragraph 2 $eq$
 
@@ -28,6 +29,7 @@ References
 2. Shtaerman I.Ya. Contact problem of elasticity theory. - M.-L.: Gostekhteorizdat, 1947 - 270 p. (In Russian)
 		
 		
+	
 	</div>
 </div>
 <style>
@@ -44,7 +46,13 @@ References
     #sidePanel {
         background: rebeccapurple;
         overflow: auto;
+		color: white;
     }
+
+	button {
+		margin-top: 5px;
+	}
+
 </style>
 <script>
 var editor = ace.edit("example", {
@@ -113,6 +121,17 @@ function replaceNumberedEquation() {
 	var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
 	editor.insert(replacement)
 }
+function convertToInline() {
+	var line = editor.getSelectedText()
+	inlineEqReg.lastIndex = 0
+	var match = inlineEqReg.exec(line)
+	var punct = match[2].trim()
+	
+	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+	var replacement = ` $${eq}$` + punct + " "
+	editor.insert(replacement)
+}
 
 dom.buildDom([
 "div", {onclick: ()=> editor.focus()},	
@@ -173,7 +192,7 @@ dom.buildDom([
 
     ["button", {onclick: function() {
 		editor.selection.moveTo(0, 0)
-		var max = 1000
+		var max = 10000
        	while(findNext(eqReg) && max-- >0) {
 			replaceNumberedEquation() 
 		}
@@ -198,16 +217,8 @@ dom.buildDom([
     }}, "display"],
     
     ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-        inlineEqReg.lastIndex = 0
-        var match = inlineEqReg.exec(line)
-        var punct = match[2].trim()
-        
-        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
-
-        var replacement = ` $${eq}$` + punct + " "
-         editor.insert(replacement)
-         editor.renderer.scrollCursorIntoView(null, 0.5)
+		convertToInline()
+        editor.renderer.scrollCursorIntoView(null, 0.5)
        editor.focus()
          
     }}, "inline"],
@@ -216,9 +227,21 @@ dom.buildDom([
        findNext(inlineEqReg)
        editor.focus()
     }}, "next"],
-
     ["br"],
 
+	["button", {onclick: function() {
+
+
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(inlineEqReg) && max-- >0) {
+			convertToInline() 
+		}
+       	editor.focus()
+    }}, "all inline"],
+
+    ["br"],
+    ["hr"],
     ["button", {onclick: function() {
        findNext(inlineEqStartReg)
        editor.focus()
@@ -238,7 +261,11 @@ dom.buildDom([
    	}}, "convert numbers to refs"],  
 
 
-	["hr"]
+
+	["br"],
+    ["hr"],
+ 
+
     //  ["button", {onclick: function() {
     //     var line = editor.getSelectedText()
          
