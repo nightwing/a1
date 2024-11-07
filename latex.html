@@ -95,7 +95,9 @@ var numberReg =/(\(\d+(?:\.[\d.]*)?\w*\))/g
 var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
 
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
-var inlineEqStartReg=/^(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+var inlineEqStartReg=/^\s*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+
+var displayEqReg=/^\s*(\$[^$]+\$)\s*$/gm
 
 var sidePanel = document.getElementById("sidePanel")
 if (!sidePanel) {
@@ -130,6 +132,18 @@ function convertToInline() {
 	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
 	var replacement = ` $${eq}$` + punct + " "
+	editor.insert(replacement)
+}
+function convertToDisplay() {
+	var line = editor.getSelectedText()
+	inlineEqReg.lastIndex = 0
+	var match = inlineEqReg.exec(line)
+
+	var punct = match[2].trim()
+	
+	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+
+	var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` 
 	editor.insert(replacement)
 }
 
@@ -201,19 +215,9 @@ dom.buildDom([
     ["br"],
 
     ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-        inlineEqReg.lastIndex = 0
-        var match = inlineEqReg.exec(line)
-
-        var punct = match[2].trim()
-        
-        var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
-
-        var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` 
-         editor.insert(replacement)
-         editor.renderer.scrollCursorIntoView(null, 0.5)
-       editor.focus()
-         
+		convertToDisplay();
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+       	editor.focus();
     }}, "display"],
     
     ["button", {onclick: function() {
@@ -230,8 +234,6 @@ dom.buildDom([
     ["br"],
 
 	["button", {onclick: function() {
-
-
 		editor.selection.moveTo(0, 0)
 		var max = 10000
        	while(findNext(inlineEqReg) && max-- >0) {
@@ -250,6 +252,17 @@ dom.buildDom([
        findNext(/^\s*\(\d+\.\d+\.\d+\w*\)\s*$/gmi)
        editor.focus()
     }}, "next empty"],
+
+	["br"],
+    ["button", {onclick: function() {
+
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(displayEqReg) && max-- >0) {
+			convertToDisplay()
+		}
+       	editor.focus()
+    }}, "all display"],
 
     ["br"],
 
@@ -486,25 +499,41 @@ ${tabular}
 
     ["br"],
 
-    ["button", {onclick: function() {
-        replaceBibItem()
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+    // ["button", {onclick: function() {
+    //     replaceBibItem()
+    //     editor.renderer.scrollCursorIntoView(null, 0.5)
         
-        editor.focus()
-    }}, "bibitem"],
+    //     editor.focus()
+    // }}, "bibitem"],
 
-    ["button", {onclick: function() {
-        findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)
+    // ["button", {onclick: function() {
+    //     findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)
+    //     editor.focus()
+    // }}, "next"],
+    // " \xa0 \xa0 \xa0 \xa0 \xa0 \xa0 ",
+    // ["button", {onclick: function() {
+    //     while (findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)) {
+    //         replaceBibItem();
+    //     }
+    //     findNext(/n{thebibliography}/)
+    //     editor.focus();
+    // }}, "all"],
+
+	["button", {onclick: function() {
+        
+		var text = editor.getSelectedText()
+
+		text = text.replace(/\n+(\d+)\.?/gm, function(_, number) {
+			return "\n\n\\bibitem{book" + number +"}\n"
+		});
+		
+		var replacement = "\\begin{thebibliography}\n"
+			+ text
+			+ "\n\\end{thebibliography}"
+
+		editor.insert(replacement)
         editor.focus()
-    }}, "next"],
-    " \xa0 \xa0 \xa0 \xa0 \xa0 \xa0 ",
-    ["button", {onclick: function() {
-        while (findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)) {
-            replaceBibItem();
-        }
-        findNext(/n{thebibliography}/)
-        editor.focus();
-    }}, "all"],
+    }}, "bibliography"],
 
 	["hr"],
 
