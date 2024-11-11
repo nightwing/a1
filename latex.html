@@ -61,6 +61,25 @@ var editor = ace.edit("example", {
     wrap: true
 });
 
+ace.config.loadModule("ace/ext/searchbox", function (e) { 
+	e.Search(editor);
+	editor.searchBox.searchInput.value = "" 
+});
+
+
+if (localStorage.lastValue) {
+	editor.setValue(localStorage.lastValue, -1);
+	if (localStorage.lastSelection) {
+		try {
+			let sel = JSON.parse(localStorage.lastSelection)
+			editor.selection.fromJSON(sel)
+		} catch(e) {
+			console.error(e)
+		}
+	}
+	editor.session.setScrollTop(localStorage.scrollTop || 0)
+}
+
 function findNext(eqreg, excludeRe) {
     value = editor.getValue()
 
@@ -85,8 +104,21 @@ function findNext(eqreg, excludeRe) {
 
     editor.renderer.scrollCursorIntoView(null, 0.5)
 
+	if (searchValue != eqreg.source) {
+		searchValue = eqreg.source
+	}
+	searchTimeout = searchTimeout || setTimeout(function() {
+		searchTimeout = null;
+		editor.searchBox.searchInput.value = eqreg.source
+		editor.searchBox.regExpOption.checked = true;
+		editor.searchBox.$syncOptions()
+	}) 
+
     return !match.fake;
 }
+
+var searchValue
+var searchTimeout
 
 var eqReg = / *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([\s,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))/g 
 var sectionReg = /^(\d+(?:\.[\d.]*)?)(.*)/gm
@@ -96,6 +128,8 @@ var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
 
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
 var inlineEqStartReg=/^\s*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+
+var eqAndBibExclusionRe = /\\begin{(equation|tabular|figure)[\s\S]*?\\end{\1|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
 
 var displayEqReg=/^\s*(\$[^$]+\$)\s*$/gm
 
@@ -147,6 +181,24 @@ function convertToDisplay() {
 	editor.insert(replacement)
 }
 
+function bookCitation() {
+	var line = editor.getSelectedText()
+	var match = /\[([\d\,\-\s]*)\]/g.exec(line)
+	var books = match[1].replace(/\s+/g, "").replace(/(\d+)-(\d+)/g, function(_, a, b) {
+		a = parseInt(a)
+		b = parseInt(b)
+		if (a > b) throw a
+		var r = [] 
+		for (var  i = a; i <= b; i++) {
+			r.push(i)
+		}
+		return r.join(",") 
+	} ).replace(/\d+/g, x=>"book" + x)
+	var replacement = "\\cite{" + books +"}"
+
+	editor.insert(replacement)
+}
+
 dom.buildDom([
 "div", {onclick: ()=> editor.focus()},	
 ["button", {onclick: function() {
@@ -178,7 +230,7 @@ dom.buildDom([
         // findNext(sectionReg)
     }}, "section"],
     ["button", {onclick: function() {
-       findNext(sectionReg)
+       findNext(sectionReg, eqAndBibExclusionRe)
        editor.focus()
     }}, "next"],
 
@@ -191,16 +243,14 @@ dom.buildDom([
     ["br"],
 
     ["button", {onclick: function() {
-        console.log(replacement)
 		replaceNumberedEquation() 
         editor.renderer.scrollCursorIntoView(null, 0.5)
-       editor.focus()
-         
+        editor.focus()
     }}, "numbered equation"],
 
     ["button", {onclick: function() {
-       findNext(eqReg)
-       editor.focus()
+       	findNext(eqReg)
+       	editor.focus()
     }}, "next"],
 	"           ",
 
@@ -223,13 +273,12 @@ dom.buildDom([
     ["button", {onclick: function() {
 		convertToInline()
         editor.renderer.scrollCursorIntoView(null, 0.5)
-       editor.focus()
-         
+       	editor.focus() 
     }}, "inline"],
 
     ["button", {onclick: function() {
-       findNext(inlineEqReg)
-       editor.focus()
+       	findNext(inlineEqReg)
+       	editor.focus()
     }}, "next"],
     ["br"],
 
@@ -245,17 +294,16 @@ dom.buildDom([
     ["br"],
     ["hr"],
     ["button", {onclick: function() {
-       findNext(inlineEqStartReg)
-       editor.focus()
+       	findNext(inlineEqStartReg)
+       	editor.focus()
     }}, "next broken"],
     ["button", {onclick: function() {
-       findNext(/^\s*\(\d+\.\d+\.\d+\w*\)\s*$/gmi)
-       editor.focus()
+       	findNext(/^\s*\(\d+\.\d+\.\d+\w*\)\s*$/gmi)
+       	editor.focus()
     }}, "next empty"],
 
 	["br"],
     ["button", {onclick: function() {
-
 		editor.selection.moveTo(0, 0)
 		var max = 10000
        	while(findNext(displayEqReg) && max-- >0) {
@@ -267,13 +315,33 @@ dom.buildDom([
     ["br"],
 
 
-	["button", {onclick: function() {
+	// ["button", {onclick: function() {
        
-	   convertNumbers()
-	  	editor.focus() 
-   	}}, "convert numbers to refs"],  
+	//    convertNumbers()
+	//   	editor.focus() 
+   	// }}, "convert numbers to refs"],  
 
+	["button", {onclick: function() {
+		replaceEqRef() 
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "eq ref"],
 
+    ["button", {onclick: function() {
+       	findNext(eqRefReg, eqAndBibExclusionRe)
+       	editor.focus()
+    }}, "next"],
+	"   \x1b  \x1b  \x1b  \x1b  ",
+
+    ["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+		var data = {}
+       	while(findNext(eqRefReg, eqAndBibExclusionRe) && max-- >0) {
+			replaceEqRef(data) 
+		}
+		console.log(max)
+    }}, "all"],
 
 	["br"],
     ["hr"],
@@ -281,15 +349,11 @@ dom.buildDom([
 
     //  ["button", {onclick: function() {
     //     var line = editor.getSelectedText()
-         
-
     //     var replacement = `\\begin{subequations}\n${line}\n\\end{subequations}`
     //     console.log(replacement)
-
     //      editor.insert(replacement)
     //      editor.renderer.scrollCursorIntoView(null, 0.5)
     //    editor.focus()
-         
     // }}, "subequations"],    
     // ["button", {onclick: function() {
     //     findNext(/eq\d+_\d+_\d+[^\d\}]+/g, /\\begin{subequations[\s\S]*?\\end{subequations/g)
@@ -297,26 +361,15 @@ dom.buildDom([
     // }}, "next"],
     ["br"],
 
-
-
-
-
-    // ["button", {onclick: function() {
-        
+    // ["button", {onclick: function() {        
     //     var figureRe = /(?<!\\)\b(sh|ch|exp)\b/g
     //     var line = editor.getSelectedText()  
-        
     //     var match = figureRe.exec(line)
     //     var figName = match[1]  
-
     //     var replacement = "\\" + figName
-
-        
     //     editor.insert(replacement)
     //     editor.renderer.scrollCursorIntoView(null, 0.5)
     //     editor.focus()
-         
-
     //     editor.focus()
     // }}, "sh|ch"],
     
@@ -332,25 +385,21 @@ dom.buildDom([
     //    editor.focus()
     // }}, "check eq refs"],
     ["br"],
-     ["button", {onclick: function() {
-       findNext(/[^\x00-\xff\s]/g)
-       editor.focus()
+    ["button", {onclick: function() {
+       	findNext(/[^\x00-\xff\s]/g)
+       	editor.focus()
     }}, "next non-english"],
     ["br"],
-     ["button", {onclick: function() {
+    ["button", {onclick: function() {
         do {
             findNext(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*\S)/g)
-
             var text = editor.getSelectedText()
         } while(text && !/^(\. *\n)/.test(text))
-
-       editor.focus()
+       	editor.focus()
     }}, "next paragraph"],
-
-
     ["br"],
 
-    ["button", {onclick: function() { 
+    ["button", {onclick: function() {
         var line = editor.getSelectedText()
         var match = /[^\d]*([\d.]+)(.*)([\s\S]*)/g.exec(line)
         var number = match[1].trim().replace(/\./g, "_").trim()
@@ -358,12 +407,12 @@ dom.buildDom([
         var tabular = match[3]
         
         var rows = tabular.trim().split("\n");
-         var l 
-         rows.forEach(function(x) {
-             if (l == null) l = x.split("\t").length
-         })
+        var l 
+        rows.forEach(function(x) {
+            if (l == null) l = x.split("\t").length
+        })
 
-         tabular = "\\begin{tabular}{|" +  "c| ".repeat(l) + "}\\hline \n"  
+        tabular = "\\begin{tabular}{|" +  "c| ".repeat(l) + "}\\hline \n"  
             + rows.map(x=>x.replace(/\t/g, " & ")).join("\\\\ \\hline \n")
             + "\\\\ \\hline \n \\end{tabular}"
 
@@ -382,18 +431,15 @@ ${tabular}
         editor.focus()
     }}, "table"],
 
-     ["button", {onclick: function() {
+    ["button", {onclick: function() {
         // (\\begin{tabular[\s\S]*?\\end{tabular})
-        findNext(/(?:(?:\\noindent\s*)?\\textbf{)?[\t ]*TABLE ([\d.]+)([\S\s]*?)/g)
+        findNext(/(TAB(LE)|Таблица)?\s*([\d.]+)([\S\s]*?)/gi)
         editor.focus()
     }}, "next"],
-
-
-
     ["br"],
 
     ["button", {onclick: function() {
-        var figureRe = /FIGURE\s*([\d.]+\w?)(.*)/i
+        var figureRe = /(?:FIGURE|Fig|фиг)?\.?\s*([\d.]+\w?)(.*)/i
         var line = editor.getSelectedText().replace(/\n/g, " ")
         var match = figureRe.exec(line)
         var number = match[1].trim().replace(/\./g, "_").trim()
@@ -471,31 +517,28 @@ ${tabular}
 
     ["hr"],
     ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-        var match = /\[([\d\,\-\s]*)\]/g.exec(line)
-        var books = match[1].replace(/\s+/g, "").replace(/(\d+)-(\d+)/g, function(_, a, b) {
-            a = parseInt(a)
-            b = parseInt(b)
-            if (a > b) throw a
-            var r = [] 
-            for (var  i = a; i <= b; i++) {
-                r.push(i)
-            }
-            return r.join(",") 
-        } ).replace(/\d+/g, x=>"book" + x)
-        var replacement = "\\cite{" + books +"}"
-
-        editor.insert(replacement)
+        bookCitation();
         editor.renderer.scrollCursorIntoView(null, 0.5)
         
-       editor.focus()
+        editor.focus()
     }}, "cite"],
 
 
-    ["button", {onclick: function() {        
-        findNext(/\[[\d\,\-\s]*\]/g,  /\\begin{equation[\s\S]*?\\end{equation|\$[^$]+\$/g)
+    ["button", {onclick: function() {
+        findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe)
         editor.focus()
     }}, "next"],
+
+	"      \x1a     \x1a \x1a  ",
+
+	["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe) && max-- >0) {
+			bookCitation();
+		}
+       	editor.focus()
+    }}, "all"],
 
     ["br"],
 
@@ -596,7 +639,26 @@ ${v1}
     if (v!=v1) editor.setValue(v1)
 }
 
-function convertNumbers() {
+var eqRefReg = /\(\d+[.\d]+\w*\)/g
+function replaceEqRef(data) {
+	if (!data) data = {}
+	var results = data.results;
+	if (!results) {
+		results = data.results = computeLabels()
+	} 
+	var e = editor.getSelectedText();
+	if (!e) return
+	var e1 = e.slice(1, -1).replace(/\./g, "_");
+	if (!results[e1]) {
+		console.log(e1)
+		editor.navigateRight()
+		return
+	}
+	var replacement = `\\eqref{eq${e1}}`
+    editor.insert(replacement)
+}
+
+function computeLabels() {
     var v = editor.getValue();
     var re = /\\label{eq([\d_\w]*)}/g
     var results = {}
@@ -604,9 +666,10 @@ function convertNumbers() {
     while ((m = re.exec(v))) {
         results[m[1]] = 1
     }
-    //\eqref
-    results
-
+    return results
+}
+function convertNumbers() {
+	var results = computeLabels();
     var v1 = v.replace(/\(\d+\.\d+\.\d+\w*\)/g, function(e) {
         var e1 = e.slice(1, -1).replace(/\./g, "_");
         if (!results[e1]) {
@@ -662,5 +725,11 @@ value.replace(/(\\bibitem{book\d+}\s*)([^\d\\\n]+)(\d+).?\s*/g, function(_, intr
     
 })
 
+
+window.onpagehide = function() {
+	localStorage.lastValue = editor.getValue();
+	localStorage.lastSelection = JSON.stringify(editor.selection.toJSON());
+	localStorage.scrollTop = editor.session.getScrollTop()
+}
 
 </script>
