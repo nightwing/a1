@@ -611,6 +611,7 @@ function initialize() {
 \\usepackage{amssymb}
 \\usepackage{graphicx}
 
+% \\usepackage{diagbox}
 
   
 \\usepackage{caption}
@@ -619,7 +620,7 @@ function initialize() {
 
 
 % \\renewcommand{\\theequation}{\\thesection.{\\arabic{equation}}}
-
+\\numberwithin{equation}{section}
 
 \\begin{document}
 
@@ -628,7 +629,9 @@ function initialize() {
     TITLE    
 } }\\end{center}
 
-\\begin{center}\\Large{g, MI 49759, USA}}, \\Large{AUTHOR NAME} \\end{center}
+\\begin{center}
+AUTHOR NAME
+\\end{center}
 
 ${v1}
 
