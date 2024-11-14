@@ -9,15 +9,16 @@ Example
 \[{{\gamma }_{1}}=\frac{1}{2\pi }\arg ,\] (1.1)
 
 
-Fig. 1 some text \[\int_L dL\]
+Fig. 1. some text \[\int_L dL\]
 Figure. 2 more text
 
-paragraph \[\int_L dL\] 1 \[\int_L dL\] (1.1) 
+paragraph \[\int_L dL\] 1 \[\int_L dL\] (1.2) 
 
-paragraph 2 $eq$
+paragraph 2 $eq$ (1.2) [1-2] and [2]
 
-Fig 3 description
+Fig. 3 description
 
+see (Fig.1) for explanation
 
 ${{\gamma }_{1}}=\frac{1}{2\pi }\arg ,$ (1.2)
 
@@ -121,6 +122,7 @@ var searchValue
 var searchTimeout
 
 var eqReg = / *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([\s,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))/g 
+var eqRegStrict = /^[ \t]*(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([\s,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))[ \t]*$/gm
 var sectionReg = /^(\d+(?:\.[\d.]*)?)(.*)/gm
 
 var numberReg =/(\(\d+(?:\.[\d.]*)?\w*\))/g 
@@ -145,6 +147,9 @@ if (!window.dom) dom = ace.require("ace/lib/dom")
 
 //editor = document.querySelector(".ace_editor").env.editor
 
+function formatRefNumber(str) {
+    return str.trim().replace(/\.+$/, "").replace(/\./g, "_").trim()
+}
 
 function replaceNumberedEquation() {
 	var line = editor.getSelectedText()
@@ -257,7 +262,7 @@ dom.buildDom([
     ["button", {onclick: function() {
 		editor.selection.moveTo(0, 0)
 		var max = 10000
-       	while(findNext(eqReg) && max-- >0) {
+       	while(findNext(eqRegStrict) && max-- >0) {
 			replaceNumberedEquation() 
 		}
     }}, "all"],
@@ -402,7 +407,7 @@ dom.buildDom([
     ["button", {onclick: function() {
         var line = editor.getSelectedText()
         var match = /[^\d]*([\d.]+)(.*)([\s\S]*)/g.exec(line)
-        var number = match[1].trim().replace(/\./g, "_").trim()
+        var number = formatRefNumber(match[1])
         var caption = match[2].trim().replace(/^}|\\textbf{}/g, "")
         var tabular = match[3]
         
@@ -442,12 +447,12 @@ ${tabular}
         var figureRe = /(?:FIGURE|Fig|фиг)?\.?\s*([\d.]+\w?)(.*)/i
         var line = editor.getSelectedText().replace(/\n/g, " ")
         var match = figureRe.exec(line)
-        var number = match[1].trim().replace(/\./g, "_").trim()
+        var number = formatRefNumber(match[1])
         var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
 
         if (figureRe.test(caption)) {
             var match2 = figureRe.exec(caption)
-            var number2 = match2[1].trim().replace(/\./g, "_").trim()
+            var number2 = formatRefNumber(match2[1])
             var caption2 =  match2[2].trim().replace(/^}|\\textbf{}/g, "").trim()
             caption = caption.slice(0, match2.index).trim()
 
@@ -499,9 +504,9 @@ ${tabular}
         
         var match = figureRe.exec(line)
         var figName = match[1]
-        var number = match[2].trim().replace(/\./g, "_").trim()
+        var number = formatRefNumber(match[2])
         var link = match[3]
-        var number2 = (match[4] || "").trim().replace(/\./g, "_").trim()
+        var number2 = formatRefNumber(match[4] || "")
 
         var replacement = figName + " \\ref{fig_" + number + "}"
 
@@ -566,9 +571,11 @@ ${tabular}
         
 		var text = editor.getSelectedText()
 
-		text = text.replace(/\n+(\d+)\.?/gm, function(_, number) {
-			return "\n\n\\bibitem{book" + number +"}\n"
-		});
+		text = text
+            .replace(/^\s*(References|Literature|литература)/i, "")
+            .replace(/\n+(\d+)\.?/gm, function(_, number) {
+                return "\n\n\\bibitem{book" + number +"}\n"
+            });
 
 		var replacement = "\\begin{thebibliography}{1}\n"
 			+ text
@@ -612,6 +619,10 @@ function initialize() {
 \\usepackage{graphicx}
 
 % \\usepackage{diagbox}
+% \\newcommand{\\Chi}{\\mathrm{X}}
+% \\newcommand{\\Alpha}{\\mathrm{A}}
+% \\usepackage{unicode-math}
+% \\newcommand{\\sgn}{\\mathop{sgn}}
 
   
 \\usepackage{caption}
