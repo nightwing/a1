@@ -104,7 +104,14 @@ function findNext(eqreg, excludeRe) {
     editor.selection.setRange({start, end})
 
     editor.renderer.scrollCursorIntoView(null, 0.5)
+    
+    lastRe = eqreg
 
+    return !match.fake;
+}
+
+function updateSearch(eqreg) {
+    if (!eqreg) eqreg = lastRe
 	if (searchValue != eqreg.source) {
 		searchValue = eqreg.source
 	}
@@ -113,11 +120,9 @@ function findNext(eqreg, excludeRe) {
 		editor.searchBox.searchInput.value = eqreg.source
 		editor.searchBox.regExpOption.checked = true;
 		editor.searchBox.$syncOptions()
-	}) 
-
-    return !match.fake;
+	})
 }
-
+var lastRe
 var searchValue
 var searchTimeout
 
@@ -210,16 +215,57 @@ dom.buildDom([
        
        initialize()
     }}, "initialize"],   
-    // "        ",
+
     
-    // ["button", {
-    //     style: "float: right",
-    //     onclick: function() {
-    //       sidePanel.remove()
-    //       editor.focus()
-    //     }
-    // }, "x"],
-    ["hr"],
+    ["hr"], // bibliography
+    ["button", {onclick: function() {
+        bookCitation();
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        
+        editor.focus()
+    }}, "cite"],
+
+
+    ["button", {onclick: function() {
+        findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe)
+        updateSearch()
+        editor.focus()
+    }}, "next"],
+
+	"      \x1a     \x1a \x1a  ",
+
+	["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe) && max-- >0) {
+			bookCitation();
+		}
+       	editor.focus()
+    }}, "all"],
+
+    ["br"],
+
+	["button", {onclick: function() {
+        
+		var text = editor.getSelectedText()
+
+		text = text
+            .replace(/^\s*(References|Literature|литература)/i, "")
+            .replace(/\n+(\d+)\.?/gm, function(_, number) {
+                return "\n\n\\bibitem{book" + number +"}\n"
+            });
+
+		var replacement = "\\begin{thebibliography}{1}\n"
+			+ text
+			+ "\n\\end{thebibliography}"
+
+		editor.insert(replacement)
+        editor.focus()
+    }}, "bibliography"],
+
+
+
+    ["hr"], // section
     ["button", {onclick: function() {
        
         var line = editor.getSelectedText()
@@ -230,12 +276,13 @@ dom.buildDom([
 
         editor.insert(`\\section{ ${caption} }\n`+`\\label{part${number}}\n`)
         editor.renderer.scrollCursorIntoView(null, 0.5)
-       editor.focus()
+        editor.focus()
 
         // findNext(sectionReg)
     }}, "section"],
     ["button", {onclick: function() {
        findNext(sectionReg, eqAndBibExclusionRe)
+       updateSearch()
        editor.focus()
     }}, "next"],
 
@@ -255,6 +302,7 @@ dom.buildDom([
 
     ["button", {onclick: function() {
        	findNext(eqReg)
+        updateSearch()
        	editor.focus()
     }}, "next"],
 	"           ",
@@ -284,6 +332,7 @@ dom.buildDom([
     ["button", {onclick: function() {
        	findNext(inlineEqReg)
        	editor.focus()
+        updateSearch()
     }}, "next"],
     ["br"],
 
@@ -335,6 +384,7 @@ dom.buildDom([
     ["button", {onclick: function() {
        	findNext(eqRefReg, eqAndBibExclusionRe)
        	editor.focus()
+        updateSearch()
     }}, "next"],
 	"   \x1b  \x1b  \x1b  \x1b  ",
 
@@ -440,6 +490,7 @@ ${tabular}
         // (\\begin{tabular[\s\S]*?\\end{tabular})
         findNext(/(TAB(LE)|Таблица)?\s*([\d.]+)([\S\s]*?)/gi)
         editor.focus()
+        updateSearch()
     }}, "next"],
     ["br"],
 
@@ -491,6 +542,7 @@ ${tabular}
     ["button", {onclick: function() {
         findNext(/(FIG(URES?|\.)?|TABLES?)\s*[\d\.]+[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
         editor.focus()
+        updateSearch()
     }}, "next"],
     ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
     ["button", {onclick: function() {
@@ -520,74 +572,58 @@ ${tabular}
         editor.focus()
     }}, "ref"],
 
+
     ["hr"],
     ["button", {onclick: function() {
-        bookCitation();
+        var text = editor
+
+
+       
+        var line = editor.getSelectedText()
+        expRe.lastIndex=0
+        var m = expRe.exec(line)
+        console.log(m)
+        var contents = (m[1] || m[2])
+        if (!contents) return;
+
+        var replacement = "e^{" + contents + "}"
+
+        var sel = editor.selection.toJSON();
+
+        var reg = ace.require("ace/lib/lang").escapeRegExp(line);
+        var reg = new RegExp(reg)
+
+        editor.selection.moveTo(0, 0)
+		var max = 10000
+		var data = {}
+       	while(findNext(reg) && max-- >0) {
+			editor.insert(replacement)
+		} 
+        
+        editor.selection.fromJSON(sel); 
+        // sectionReg.lastIndex = 0
+        // var match = sectionReg.exec(line)
+        // var number = match[1] 
+        // var caption = match[2].trim()
+
+        // editor.insert(`\\section{ ${caption} }\n`+`\\label{part${number}}\n`)
         editor.renderer.scrollCursorIntoView(null, 0.5)
         
         editor.focus()
-    }}, "cite"],
 
+    }}, "exp to e"],
 
     ["button", {onclick: function() {
-        findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe)
+        findNext(expRe)
         editor.focus()
+        updateSearch()
     }}, "next"],
-
-	"      \x1a     \x1a \x1a  ",
-
-	["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe) && max-- >0) {
-			bookCitation();
-		}
-       	editor.focus()
-    }}, "all"],
-
-    ["br"],
-
-    // ["button", {onclick: function() {
-    //     replaceBibItem()
-    //     editor.renderer.scrollCursorIntoView(null, 0.5)
-        
-    //     editor.focus()
-    // }}, "bibitem"],
-
-    // ["button", {onclick: function() {
-    //     findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)
-    //     editor.focus()
-    // }}, "next"],
-    // " \xa0 \xa0 \xa0 \xa0 \xa0 \xa0 ",
-    // ["button", {onclick: function() {
-    //     while (findNext(/\n+\d+\./gm, /^[\S\s]*\\begin{thebibliography}/g)) {
-    //         replaceBibItem();
-    //     }
-    //     findNext(/n{thebibliography}/)
-    //     editor.focus();
-    // }}, "all"],
-
-	["button", {onclick: function() {
-        
-		var text = editor.getSelectedText()
-
-		text = text
-            .replace(/^\s*(References|Literature|литература)/i, "")
-            .replace(/\n+(\d+)\.?/gm, function(_, number) {
-                return "\n\n\\bibitem{book" + number +"}\n"
-            });
-
-		var replacement = "\\begin{thebibliography}{1}\n"
-			+ text
-			+ "\n\\end{thebibliography}"
-
-		editor.insert(replacement)
-        editor.focus()
-    }}, "bibliography"],
-
-	["hr"],
+    
 
 ], sidePanel)
+
+var expRe = /\\exp\s*(?:\(([^)]*)\)|\\left\(([^)]*)\\right\))/g
+
 
 function replaceBibItem() {
     var line = editor.getSelectedText()
@@ -693,7 +729,6 @@ function convertNumbers() {
         return `\\eqref{eq${e1}}`
     })
     if (v1 != v) editor.setValue(v1)
-
 }
 
 function fixBibliography() {
@@ -711,7 +746,7 @@ function fixBibliography() {
     editor.setValue(newValue)
 }
 
-
+function randomStuff() {
 
 value = "\\bibitem{book19}\n\
 	Uflyand, Ya.1968. Integral Transformations in Problems of the Elasticity Theory. Leningrad. Nauka. 402 (in Russian).   \
@@ -738,7 +773,21 @@ value.replace(/(\\bibitem{book\d+}\s*)([^\d\\\n]+)(\d+).?\s*/g, function(_, intr
     return intro + newNames + " (" + number + ") " 
     
 })
+}
 
+function removeAlignement() {
+    v=editor.getValue().replace(/\\(begin|end){aligned}/g, "")
+    .replaceAll("\\right.", "").replaceAll("\\left.", "")
+    .replaceAll("\\right", "").replaceAll("\\left", "")
+
+    .replaceAll(/\\\\/g, "") .replaceAll(/&/g, "")
+    .replaceAll(/\\\\/g, "") .replaceAll(/&/g, "")
+    .replaceAll(/ *\+ *\n *\+/g, " +\n")
+    .replaceAll(/ *\- *\n *\-/g, " -\n")
+    .replaceAll(/ *\\times  *\n *\\times/g, " \\times\n")
+    console.log(v)
+
+}
 
 window.onpagehide = function() {
 	localStorage.lastValue = editor.getValue();
