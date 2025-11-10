@@ -1,3 +1,4 @@
+<!doctype html>
 <script src="https://ace.c9.io/build/src/ace.js"></script>
 <div id="container">
     <div id="sidePanel"></div>
@@ -34,9 +35,13 @@ References
 	</div>
 </div>
 <style>
+	body {
+		margin: 0;
+	}
+	
     #container {
         display: flex;
-        height: 100%;
+        height: 100vh;
         align-items: stretch;
     }
 
@@ -48,6 +53,7 @@ References
         background: rebeccapurple;
         overflow: auto;
 		color: white;
+		padding-left: 8px
     }
 
 	button {
@@ -193,8 +199,8 @@ function convertToDisplay() {
 
 function bookCitation() {
 	var line = editor.getSelectedText()
-	var match = /\[([\d\,\-\s]*)\]/g.exec(line)
-	var books = match[1].replace(/\s+/g, "").replace(/(\d+)-(\d+)/g, function(_, a, b) {
+	var match = /\[([\d\,\-\s\–]*)\]/g.exec(line)
+	var books = match[1].replace(/\s+/g, "").replace(/(\d+)(?:-+|–)(\d+)/g, function(_, a, b) {
 		a = parseInt(a)
 		b = parseInt(b)
 		if (a > b) throw a
@@ -227,7 +233,7 @@ dom.buildDom([
 
 
     ["button", {onclick: function() {
-        findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe)
+        findNext(/\[[\d\,\-\s\–]*\]/g, eqAndBibExclusionRe)
         updateSearch()
         editor.focus()
     }}, "next"],
@@ -237,7 +243,7 @@ dom.buildDom([
 	["button", {onclick: function() {
 		editor.selection.moveTo(0, 0)
 		var max = 10000
-       	while(findNext(/\[[\d\,\-\s]*\]/g, eqAndBibExclusionRe) && max-- >0) {
+       	while(findNext(/\[[\d\,\-\s\–]*\]/g, eqAndBibExclusionRe) && max-- >0) {
 			bookCitation();
 		}
        	editor.focus()
@@ -619,6 +625,10 @@ ${tabular}
         updateSearch()
     }}, "next"],
     
+    ["hr"],
+    
+    ["button", {onclick: importTableFromHTML}, "import table"]
+    
 
 ], sidePanel)
 
@@ -653,6 +663,7 @@ function initialize() {
 \\usepackage{amsfonts}
 \\usepackage{amssymb}
 \\usepackage{graphicx}
+\\usepackage{longtable}
 
 % \\usepackage{diagbox}
 % \\newcommand{\\Chi}{\\mathrm{X}}
@@ -689,7 +700,7 @@ ${v1}
     if (v!=v1) editor.setValue(v1)
 }
 
-var eqRefReg = /\(\d+[.\d]+\w*\)/g
+var eqRefReg = /\(\d+[.\d]*\w*\)/g
 function replaceEqRef(data) {
 	if (!data) data = {}
 	var results = data.results;
@@ -795,4 +806,144 @@ window.onpagehide = function() {
 	localStorage.scrollTop = editor.session.getScrollTop()
 }
 
+
+
+function importHtml(html) {
+	if (div) div.remove()
+	div = document.createElement("div")
+    div.innerHTML = html 
+    console.log(html)
+	document.body.appendChild(div)
+}
+
+var html, div
+editor.addEventListener("paste", function name(params) {
+    
+    var pastedHtml = params.event.clipboardData.getData("text/html")
+    if (pastedHtml)
+        html = pastedHtml;
+	/*if (html) {
+		if (confirm("do you want to automatically import pasted text")) {
+			importHtml(html)
+		}
+	}*/
+    
+})
+
+async function importTableFromHTML() { 
+        var clipboardContents = await navigator.clipboard.read(["text/html"])
+        for (var item of clipboardContents) {
+            for (var mimeType of item.types) {
+                if (mimeType === "text/html") {
+                    var blob = await item.getType("text/html");
+                    var blobText = await blob.text();
+                    html = blobText
+                }
+            }
+        } 
+    importHtml(html)
+    
+    
+tt = div.querySelectorAll("table")
+
+t = tt[0].firstElementChild
+
+columnCount = Math.max(...Array.from(t.querySelectorAll("tr")).map(x=>x.childElementCount))
+columnCount
+
+inserts = new Array(columnCount)
+rows=Array.from(t.querySelectorAll("tr")).map(x=>{
+    var cells = [];
+    var cellIndex = 0
+    var clineSpans = []
+    var clineStart = 0
+    for (var i = 0; i < x.children.length; i++) {
+        if (inserts[cellIndex] > 1) {
+            inserts[cellIndex]--
+            cells[cellIndex] = ""
+            if (inserts[cellIndex] > 1) {
+                if (clineStart < cellIndex) {
+                    clineSpans.push([clineStart, cellIndex])
+                }
+                clineStart = cellIndex + 1
+            }
+            
+            cellIndex++
+            i--
+            continue
+        }
+        var ch = x.children[i];
+        cells[cellIndex] = ch.textContent.trim()
+        if (ch.rowSpan > 1) {
+            // debugger
+            inserts[cellIndex] = ch.rowSpan 
+            cells[cellIndex] = `\\multirow{${ch.rowSpan}}{*}{${cells[cellIndex]}}`
+            
+            if (clineStart < cellIndex) {
+                clineSpans.push([clineStart, cellIndex])
+            }            
+            clineStart = cellIndex + 1
+        }
+
+        /*if (cellIndex >= 2 && cellIndex < 90) {
+            if (cells[cellIndex] != "-" && !isNaN(parseFloat(cells[cellIndex])) ) {
+                
+                cells[cellIndex] = (parseFloat(cells[cellIndex]) * 100) .toFixed(5).replace(/0+$/,"").replace(/\.$/, "")
+            }
+        }*/
+        
+        cellIndex++
+    }
+    if (clineStart < cellIndex) {
+        clineSpans.push([clineStart, cellIndex])
+    }
+    var cline = clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`)
+    return cells.join("\t&\t") + "\\\\ \n " + cline + "\n"
+})
+    console.log(rows.join(""))
+
+result = `
+\\begin{table}[t]
+    \\centering
+    \\begin{tabular}{|${"c|".repeat(columnCount)}}
+    \\hline 
+        
+${rows.join("")}
+         
+         
+    \\end{tabular}
+    \\caption{Dimensionless values of frequencies and critical forces}
+    \\label{tab:1}
+\\end{table}
+`
+
+longResult = result = `
+\\begin{longtable}[t]{|${"c|".repeat(columnCount)}}
+    \\caption{Dimensionless values of frequencies and critical forces}
+    \\label{tab:1} \\\\
+
+\\hline
+${rows.join("")}
+          
+\\end{longtable}
+`
+
+editor.setValue(longResult)
+
+}
+
 </script>
+
+<!--
+
+
+
+// editor.addEventListener("paste", function name(params) {
+//     html = params.event.clipboardData.getData("text/html")
+//     div = document.createElement("div")
+//     div.innerHTML = html 
+//     console.log(html)
+// })
+
+
+-->
