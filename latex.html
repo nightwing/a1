@@ -829,8 +829,9 @@ editor.addEventListener("paste", function name(params) {
 	}*/
     
 })
-
-async function importTableFromHTML() { 
+//https://www.tablesgenerator.com/latex_tables
+async function importTableFromHTML(htmlArg) { 
+    if (!htmlArg) {
         var clipboardContents = await navigator.clipboard.read(["text/html"])
         for (var item of clipboardContents) {
             for (var mimeType of item.types) {
@@ -841,66 +842,91 @@ async function importTableFromHTML() {
                 }
             }
         } 
+    } else {
+        html = htmlArg
+    }
     importHtml(html)
     
     
-tt = div.querySelectorAll("table")
+	tt = div.querySelectorAll("table")
+    var table = tt[0]; 
 
-t = tt[0].firstElementChild
+    var domRows = Array.from(table.querySelectorAll(":scope>tbody>tr, :scope>thead>tr, :scope>tr"))
 
-columnCount = Math.max(...Array.from(t.querySelectorAll("tr")).map(x=>x.childElementCount))
-columnCount
+	// todo can have both thead and tbody
+	t = tt[0].firstElementChild
 
-inserts = new Array(columnCount)
-rows=Array.from(t.querySelectorAll("tr")).map(x=>{
-    var cells = [];
-    var cellIndex = 0
-    var clineSpans = []
-    var clineStart = 0
-    for (var i = 0; i < x.children.length; i++) {
-        if (inserts[cellIndex] > 1) {
-            inserts[cellIndex]--
-            cells[cellIndex] = ""
-            if (inserts[cellIndex] > 1) {
-                if (clineStart < cellIndex) {
-                    clineSpans.push([clineStart, cellIndex])
+    var tableData = []
+    var columnCount = 0
+    domRows.forEach(function(row, i) {
+        var rowData = tableData[i] || (tableData[i] = [])
+        var cellIndex = 0
+        Array.from(row.children).forEach(function(cell, j) {
+            var cellData = {
+                text: cell.textContent.trim(),
+                rowSpan: cell.rowSpan,
+                colSpan: cell.colSpan
+            }
+            while (rowData[cellIndex]) cellIndex++
+            rowData[cellIndex] = cellData
+            if (cellData.colSpan > 1) {
+                for (var k = 1; k < cellData.colSpan; k++) {
+                    rowData[cellIndex + k] = "<<"
                 }
-                clineStart = cellIndex + 1
             }
-            
-            cellIndex++
-            i--
-            continue
-        }
-        var ch = x.children[i];
-        cells[cellIndex] = ch.textContent.trim()
-        if (ch.rowSpan > 1) {
-            // debugger
-            inserts[cellIndex] = ch.rowSpan 
-            cells[cellIndex] = `\\multirow{${ch.rowSpan}}{*}{${cells[cellIndex]}}`
-            
-            if (clineStart < cellIndex) {
-                clineSpans.push([clineStart, cellIndex])
-            }            
-            clineStart = cellIndex + 1
-        }
+            if (cellData.rowSpan > 1) {
+                for (var r = 1; r < cellData.rowSpan; r++) {
+                    var nextRow = tableData[i + r] || (tableData[i + r] = [])
+                    nextRow[cellIndex] = {
+                        fromAbove: true,
+                        text: "",
+                        rowSpan: cellData.rowSpan - r,
+                        colSpan: cellData.colSpan
+                    }
+                    for (var c = 1; c < cellData.colSpan; c++) {
+                        nextRow[cellIndex + c] = "<<"
+                    }
+                }
+            }
+            cellIndex += cellData.colSpan
+        })
+        if (rowData.length > columnCount) columnCount = rowData.length
+    });
 
-        /*if (cellIndex >= 2 && cellIndex < 90) {
-            if (cells[cellIndex] != "-" && !isNaN(parseFloat(cells[cellIndex])) ) {
-                
-                cells[cellIndex] = (parseFloat(cells[cellIndex]) * 100) .toFixed(5).replace(/0+$/,"").replace(/\.$/, "")
+    var texRows = tableData.map(rowData => {
+		var cells = [];
+		var clineSpans = []
+		var clineStart = 0
+        for (var j = 0; j < rowData.length; j++) {
+            var cellData = rowData[j];
+            if (cellData == "<<") {
+                continue
             }
-        }*/
-        
-        cellIndex++
-    }
-    if (clineStart < cellIndex) {
-        clineSpans.push([clineStart, cellIndex])
-    }
-    var cline = clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`)
-    return cells.join("\t&\t") + "\\\\ \n " + cline + "\n"
-})
-    console.log(rows.join(""))
+            var cellText = cellData.text
+            if (cellData.rowSpan > 1 && !cellData.fromAbove) {
+                cellText = `\\multirow{${cellData.rowSpan}}{*}{${cellText}}`
+            }
+            if (cellData.rowSpan > 1) {
+                if (clineStart < j) {
+                    clineSpans.push([clineStart, j])
+                }
+                clineStart = j + cellData.colSpan
+            }
+            if (cellData.colSpan > 1) {
+                cellText = `\\multicolumn{${cellData.colSpan}}{|c|}{${cellText}}`
+            }
+            cells.push(cellText)
+        }
+		if (clineStart < j) {
+			clineSpans.push([clineStart, j])
+		}
+
+		var cline = clineSpans.length == 1 && clineSpans[0][0] == 0 && clineSpans[0][1] == columnCount
+            ? "\\hline"
+            : clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`).join("\n");
+		return cells.join("\t&\t") + "\\\\ \n " + cline + "\n"
+    });
+
 
 result = `
 \\begin{table}[t]
@@ -908,7 +934,7 @@ result = `
     \\begin{tabular}{|${"c|".repeat(columnCount)}}
     \\hline 
         
-${rows.join("")}
+${texRows.join("")}
          
          
     \\end{tabular}
@@ -921,11 +947,8 @@ longResult = result = `
 \\begin{longtable}[t]{|${"c|".repeat(columnCount)}}
     \\caption{Dimensionless values of frequencies and critical forces}
     \\label{tab:1} \\\\
-
 \\hline
-${rows.join("")}
-          
-\\end{longtable}
+${texRows.join("")}\\end{longtable}
 `
 
 editor.setValue(longResult)
@@ -935,6 +958,55 @@ editor.setValue(longResult)
 </script>
 
 <!--
+
+
+
+testHML=`<table><tbody>
+  <tr>
+    <th  colspan="2" rowspan="2">mm888888888888888888888888888888</th>
+    <th >a</th>
+    <th >b</th>
+    <th >c</th>
+  </tr>
+  <tr>
+    <th >d</th>
+    <th >e</th>
+    <th >f</th>
+  </tr> 
+
+  <tr>
+    <td >x</td>
+    <td >y</td>
+    <td >z</td>
+    <td  colspan="2" rowspan="2">xxx99</td>
+  </tr>
+  <tr>
+    <td >1</td>
+    <td >2</td>
+    <td >3</td>
+  </tr>
+</tbody>
+</table>`
+
+impiortHtml(testHML)
+importTableFromHTML()
+
+testOutput=`\begin{longtable}[t]{|c|c|c|c|c|}
+    \caption{Dimensionless values of frequencies and critical forces}
+    \label{tab:1} \\
+
+\hline
+\multicolumn{2}{|c|}{\multirow{2}{*}{mm888888888888888888888888888888}}	&	a	&	b	&	c\\ 
+ \cline{4-5}
+\multicolumn{2}{|c|}{}	&	d	&	e	&	f\\ 
+ \cline{1-5}
+x	&	y	&	z	&	\multicolumn{2}{|c|}{\multirow{2}{*}{xxx99}}\\ 
+ \cline{1-3}
+1	&	2	&	3 & \multicolumn{2}{|c|}{}\\ 
+ \cline{1-5}
+
+          
+\end{longtable}`
 
 
 
