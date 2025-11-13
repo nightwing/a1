@@ -1,5 +1,6 @@
 <!doctype html>
-<script src="https://ace.c9.io/build/src/ace.js"></script>
+<script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
+<script src="https://ajaxorg.github.io/ace-builds/src/ext-diff.js"></script>
 <div id="container">
     <div id="sidePanel"></div>
     <div id='example'>
@@ -87,7 +88,7 @@ if (localStorage.lastValue) {
 	editor.session.setScrollTop(localStorage.scrollTop || 0)
 }
 
-function findNext(eqreg, excludeRe) {
+function findNext(eqreg, excludeRe, inclusionRe) {
     value = editor.getValue()
 
     if (excludeRe) {
@@ -95,6 +96,18 @@ function findNext(eqreg, excludeRe) {
             return " ".repeat(_.length)
         })
     }
+	if (inclusionRe) {
+        inclusionRe.lastIndex = 0;
+		var m 
+		var newValue = ""
+        var lastIndex = 0
+		while((m = inclusionRe.exec(value))) {
+            newValue += value.slice(lastIndex, m.index).replace(/./g, " ")
+			newValue += m[0]
+			lastIndex = m.index + m[0].length
+		}
+		value = newValue
+	}
 
     lastIndex = editor.session.doc.positionToIndex(editor.selection.getRange().end) 
 
@@ -121,6 +134,7 @@ function updateSearch(eqreg) {
 	if (searchValue != eqreg.source) {
 		searchValue = eqreg.source
 	}
+    if (editor.selection.isEmpty()) return;
 	searchTimeout = searchTimeout || setTimeout(function() {
 		searchTimeout = null;
 		editor.searchBox.searchInput.value = eqreg.source
@@ -143,6 +157,9 @@ var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g
 var inlineEqStartReg=/^\s*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
 
 var eqAndBibExclusionRe = /\\begin{(equation|tabular|figure)[\s\S]*?\\end{\1|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
+
+var eqInclusionRe = /\\begin{(equation|align)[\s\S]*?\\end{\1|\$[^$]+\$|\\\[(?:[^\\]|\\[^\]])+\\\]/g
+
 
 var displayEqReg=/^\s*(\$[^$]+\$)\s*$/gm
 
@@ -624,6 +641,31 @@ ${tabular}
         editor.focus()
         updateSearch()
     }}, "next"],
+
+    ["br"],
+
+	["button", {onclick: function() {
+		replaceShOrCh() 
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "sh|ch"],
+
+    ["button", {onclick: function() {
+       	findNext(shOrChReg, null, eqInclusionRe)
+       	editor.focus()
+        updateSearch()
+    }}, "next"],
+	"   \x1b  \x1b  \x1b  \x1b  ",
+
+    ["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+		var data = {}
+       	while(findNext(shOrChReg, null, eqInclusionRe) && max-- >0) {
+			replaceShOrCh(data) 
+		}
+		console.log(max)
+    }}, "all"],
     
     ["hr"],
     
@@ -632,7 +674,25 @@ ${tabular}
 
 ], sidePanel)
 
+
+var shOrChReg = /\\(?:text|operatorname){(sh|ch)}|(?<!\\)(sh|ch)/g
+
+
 var expRe = /\\exp\s*(?:\(([^)]*)\)|\\left\(([^)]*)\\right\))/g
+
+function replaceShOrCh() {
+    var e = editor.getSelectedText();
+    if (!e) return
+    shOrChReg.lastIndex = 0;
+    var match = shOrChReg.exec(e)
+    var matchValue = match[1] || match[2];
+    var replacement;
+    if (matchValue == "sh") replacement = "\\sinh";
+    if (matchValue == "ch") replacement = "\\cosh";
+
+    if (!replacement) return;
+    editor.insert(replacement)
+}
 
 
 function replaceBibItem() {
@@ -1016,6 +1076,17 @@ x	&	y	&	z	&	\multicolumn{2}{|c|}{\multirow{2}{*}{xxx99}}\\
 //     div.innerHTML = html 
 //     console.log(html)
 // })
+
+
+
+findNext(/\\(?:text|operatorname){(sh|ch)}/g, null, eqAndBibExclusionRe) 
+
+
+
+// require("ace/ext/diff").createDiffView({
+//     editorA: editor 
+// })
+editor.session.
 
 
 -->
