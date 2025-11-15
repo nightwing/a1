@@ -1,4 +1,5 @@
 <!doctype html>
+<meta charset="utf-8">
 <script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
 <script src="https://ajaxorg.github.io/ace-builds/src/ext-diff.js"></script>
 <div id="container">
@@ -88,25 +89,29 @@ if (localStorage.lastValue) {
 	editor.session.setScrollTop(localStorage.scrollTop || 0)
 }
 
+function applyInclusionRe(value, inclusionRe) {
+    inclusionRe.lastIndex = 0;
+    var m 
+    var newValue = ""
+    var lastIndex = 0
+    while((m = inclusionRe.exec(value))) {
+        newValue += value.slice(lastIndex, m.index).replace(/./g, " ")
+        newValue += m[0]
+        lastIndex = m.index + m[0].length
+    }
+    return newValue
+}
+
 function findNext(eqreg, excludeRe, inclusionRe) {
     value = editor.getValue()
 
     if (excludeRe) {
         value = value.replace(excludeRe, function(_) {
-            return " ".repeat(_.length)
+            return _.replace(/./g, " ")
         })
     }
 	if (inclusionRe) {
-        inclusionRe.lastIndex = 0;
-		var m 
-		var newValue = ""
-        var lastIndex = 0
-		while((m = inclusionRe.exec(value))) {
-            newValue += value.slice(lastIndex, m.index).replace(/./g, " ")
-			newValue += m[0]
-			lastIndex = m.index + m[0].length
-		}
-		value = newValue
+		value = applyInclusionRe(value, inclusionRe)
 	}
 
     lastIndex = editor.session.doc.positionToIndex(editor.selection.getRange().end) 
@@ -134,12 +139,16 @@ function updateSearch(eqreg) {
 	if (searchValue != eqreg.source) {
 		searchValue = eqreg.source
 	}
-    if (editor.selection.isEmpty()) return;
 	searchTimeout = searchTimeout || setTimeout(function() {
 		searchTimeout = null;
 		editor.searchBox.searchInput.value = eqreg.source
 		editor.searchBox.regExpOption.checked = true;
-		editor.searchBox.$syncOptions()
+        editor.searchBox.find = function() {}
+        try  {
+		    editor.searchBox.$syncOptions()
+        } finally {
+            delete editor.searchBox.find;
+        }
 	})
 }
 var lastRe
@@ -237,10 +246,32 @@ dom.buildDom([
 ["button", {onclick: function() {
        
        initialize()
+       findNext(/^\s*(References|Literature|литература)/mi)
     }}, "initialize"],   
 
     
     ["hr"], // bibliography
+
+	["button", {onclick: function() {
+        
+		var text = editor.getSelectedText()
+
+		text = text
+            .replace(/^\s*(References|Literature|литература)/i, "")
+            .replace(/\n+\s*(\d+)\.?/gm, function(_, number) {
+                return "\n\n\\bibitem{book" + number +"}\n"
+            });
+
+		var replacement = "\\begin{thebibliography}{1}\n"
+			+ text
+			+ "\n\\end{thebibliography}"
+
+		editor.insert(replacement)
+        editor.focus()
+    }}, "bibliography"],
+
+    ["br"],
+
     ["button", {onclick: function() {
         bookCitation();
         editor.renderer.scrollCursorIntoView(null, 0.5)
@@ -267,24 +298,6 @@ dom.buildDom([
     }}, "all"],
 
     ["br"],
-
-	["button", {onclick: function() {
-        
-		var text = editor.getSelectedText()
-
-		text = text
-            .replace(/^\s*(References|Literature|литература)/i, "")
-            .replace(/\n+(\d+)\.?/gm, function(_, number) {
-                return "\n\n\\bibitem{book" + number +"}\n"
-            });
-
-		var replacement = "\\begin{thebibliography}{1}\n"
-			+ text
-			+ "\n\\end{thebibliography}"
-
-		editor.insert(replacement)
-        editor.focus()
-    }}, "bibliography"],
 
 
 
@@ -675,7 +688,7 @@ ${tabular}
 ], sidePanel)
 
 
-var shOrChReg = /\\(?:text|operatorname){(sh|ch)}|(?<!\\)(sh|ch)/g
+var shOrChReg = /\\(?:text|operatorname){(sh|ch)} *|(?<!\\\w*)(sh|ch) */g
 
 
 var expRe = /\\exp\s*(?:\(([^)]*)\)|\\left\(([^)]*)\\right\))/g
@@ -687,8 +700,8 @@ function replaceShOrCh() {
     var match = shOrChReg.exec(e)
     var matchValue = match[1] || match[2];
     var replacement;
-    if (matchValue == "sh") replacement = "\\sinh";
-    if (matchValue == "ch") replacement = "\\cosh";
+    if (matchValue == "sh") replacement = "\\sinh ";
+    if (matchValue == "ch") replacement = "\\cosh ";
 
     if (!replacement) return;
     editor.insert(replacement)
@@ -724,6 +737,7 @@ function initialize() {
 \\usepackage{amssymb}
 \\usepackage{graphicx}
 \\usepackage{longtable}
+\\usepackage{multirow}
 
 % \\usepackage{diagbox}
 % \\newcommand{\\Chi}{\\mathrm{X}}
@@ -891,7 +905,7 @@ editor.addEventListener("paste", function name(params) {
 })
 //https://www.tablesgenerator.com/latex_tables
 async function importTableFromHTML(htmlArg) { 
-    if (!htmlArg) {
+    if (typeof htmlArg != "string") {
         var clipboardContents = await navigator.clipboard.read(["text/html"])
         for (var item of clipboardContents) {
             for (var mimeType of item.types) {
@@ -1015,6 +1029,78 @@ editor.setValue(longResult)
 
 }
 
+
+function renderPreview(text) {
+    var text = text.trim();
+    console.log("rendering ", text)
+    var displayMode = !/\$/.test(text);
+
+    text = text.replace(/^(\$|\\\[|\\begin{(equation|align)\*?})\s*/s, "")
+         .replace(/(\$|\\\]|\\end{(equation|align).*)$/s, "")
+         .replace(/\\label{[^}]*}/g, "")
+
+    var element = document.createElement("div")
+    element.style.padding = "5px"
+    katex.render(text, element, {
+        throwOnError: false,
+        displayMode,
+        macros: {
+        },
+        output: "mathml"
+    });
+    return element
+}
+
+var HoverTooltip = ace.require("ace/tooltip").HoverTooltip;
+var Range = ace.require("ace/range").Range;
+var docTooltip = new HoverTooltip();
+
+var savedValue = null
+editor.on("change", function() {
+    savedValue = null
+});
+
+docTooltip.setDataProvider(function(e, editor) {
+    var renderer = editor.renderer;
+
+    var session = editor.session;
+    var docPos = e.getDocumentPosition();
+
+    if (!savedValue) {
+        savedValue = editor.getValue();
+
+        savedValue = applyInclusionRe(savedValue, eqInclusionRe);
+    }
+
+    var index = session.doc.positionToIndex(docPos, 0);
+
+    eqInclusionRe.lastIndex = 0;
+    var m = null;
+    var hover = null;
+    while ((m = eqInclusionRe.exec(savedValue))) {
+        var start = m.index;
+        var end = eqInclusionRe.lastIndex;
+        if (index >= start && index <= end) {
+            var text = m[0];
+            var startPos = session.doc.indexToPosition(start, 0);
+            var endPos = session.doc.indexToPosition(end, 0);
+            var range = Range.fromPoints(startPos, endPos);
+            hover = { text, range };
+            break;
+        }
+        if (index < start) {
+            break;
+        }
+    }
+
+    if (hover) {
+        var domNode = renderPreview(hover.text);
+        docTooltip.showForRange(editor, hover.range, domNode, e);
+    }
+});
+
+docTooltip.addToEditor(editor)
+
 </script>
 
 <!--
@@ -1090,3 +1176,5 @@ editor.session.
 
 
 -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.js"></script>
