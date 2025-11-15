@@ -15,7 +15,7 @@ Example
 Fig. 1. some text \[\int_L dL\]
 Figure. 2 more text
 
-paragraph \[\int_L dL\] 1 \[\int_L dL\] (1.2) 
+paragraph % \[\int_L dL\] 1 \[\int_L dL\] (1.2) 
 
 paragraph 2 $eq$ (1.2) [1-2] and [2]
 
@@ -723,7 +723,8 @@ function initialize() {
 
     v1 = v1.replace(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*[^\s}\])$])/g, function(a,_,b) { if(b) return b + "\n"; return a })
     v1 = v1.replace(/{align}/g, "{aligned}")
-    v1 = v1.replace(/а/g, "a")
+    v1 = v1.replace(/(?<!\\)%/g, "\\%")
+    // v1 = v1.replace(/а/g, "a")
     v1 = v1.replace(/–/g, "--")
     v1 = v1.replace(/[“”]/g, '"')
 
@@ -752,18 +753,18 @@ function initialize() {
 
 
 % \\renewcommand{\\theequation}{\\thesection.{\\arabic{equation}}}
-\\numberwithin{equation}{section}
+% \\numberwithin{equation}{section}
+
+
+\\title{ <Title here> }
+\\author{ <author1> \\and <author2> }
 
 \\begin{document}
+\\maketitle
 
-
-\\begin{center}\\Large{\\textbf{  
-    TITLE    
-} }\\end{center}
-
-\\begin{center}
-AUTHOR NAME
-\\end{center}
+\\begin{abstract}
+    <put abstract here>
+\\end{abstract}
 
 ${v1}
 
