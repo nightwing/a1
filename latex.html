@@ -2,6 +2,11 @@
 <meta charset="utf-8">
 <script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
 <script src="https://ajaxorg.github.io/ace-builds/src/ext-diff.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css"  crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.js" crossorigin="anonymous"></script>
+
+
 <div id="container">
     <div id="sidePanel"></div>
     <div id='example'>
@@ -220,7 +225,7 @@ var numberReg =/(\(\d+(?:\.[\d.]*)?\w*\))/g
 var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
 
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
-var inlineEqStartReg=/^[ \t]*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+var inlineEqStartReg=/(^[ \t]*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\])([ \t,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))?/gm 
 
 var eqAndBibExclusionRe = /\\begin{(equation|tabular|figure)[\s\S]*?\\end{\1|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
 
@@ -261,22 +266,32 @@ function convertToInline() {
 	inlineEqReg.lastIndex = 0
 	var match = inlineEqReg.exec(line)
 	var punct = match[2].trim()
+    var tail = line.slice(inlineEqReg.lastIndex).trim()
 	
 	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
-	var replacement = ` $${eq}$` + punct + " "
+	var replacement = ` $${eq}$` + punct + " " + tail
 	editor.insert(replacement)
 }
 function convertToDisplay() {
 	var line = editor.getSelectedText()
 	inlineEqReg.lastIndex = 0
 	var match = inlineEqReg.exec(line)
+    var tail = line.slice(inlineEqReg.lastIndex).trim()
+    // check if tail contains numbered equation
+    if (tail) {
+        eqReg.lastIndex = 0
+	    var match2 = eqReg.exec(line)
+        if (match2?.[3]) {
+            return replaceNumberedEquation();
+        }
+    }
 
 	var punct = match[2].trim()
 	
 	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
-	var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` 
+	var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` + (tail ? "\n" + tail : "")
 	editor.insert(replacement)
 }
 
@@ -303,13 +318,13 @@ dom.buildDom([
 ["button", {onclick: function() {
        
        initialize()
-       findNext(/^\s*(References|Literature|литература)/mi)
+       findNext(/^[ \t]*(References|Literature|литература)(\s*\d+\..*)+/mi)
     }}, "initialize"],   
 "      \x1a     \x1a \x1a  ",
 ["button", {onclick: function() {
        
        initializeFromHTML()
-       findNext(/^\s*(References|Literature|литература)/mi)
+       findNext(/^[ \t]*(References|Literature|литература)(\s*\d+\..*)+/mi)
     }}, "from html"],   
     
     ["hr"], // bibliography
@@ -366,13 +381,16 @@ dom.buildDom([
     ["hr"], // section
     ["button", {onclick: function() {
        
-        var line = editor.getSelectedText()
+        var line = editor.getSelectedText().trim()
         sectionReg.lastIndex = 0
         var match = sectionReg.exec(line)
-        var number = match[1] 
-        var caption = match[2].trim()
-
-        editor.insert(`\\section{ ${caption} }\n`+`\\label{part${number}}\n`)
+        if (match) {
+            var number = match[1]
+            var caption = match[2].trim()
+            editor.insert(`\\section{\n    ${caption}\n}\\label{part${number}}\n`)
+        } else {
+            editor.insert(`\\section{\n    ${line}\n}\n`)
+        }
         editor.renderer.scrollCursorIntoView(null, 0.5)
         editor.focus()
 
@@ -393,25 +411,16 @@ dom.buildDom([
     ["br"],
 
     ["button", {onclick: function() {
-		replaceNumberedEquation() 
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        editor.focus()
-    }}, "numbered equation"],
-
+       	findNext(inlineEqStartReg)
+       	editor.focus()
+    }}, "next broken"],
+    "\xa0",
     ["button", {onclick: function() {
        	findNext(eqReg)
         updateSearch()
        	editor.focus()
-    }}, "next"],
-	"           ",
+    }}, "next numbered"],
 
-    ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(eqRegStrict) && max-- >0) {
-			replaceNumberedEquation() 
-		}
-    }}, "all"],
 
     ["br"],
 
@@ -434,44 +443,9 @@ dom.buildDom([
     }}, "next"],
     ["br"],
 
-	["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(inlineEqReg) && max-- >0) {
-			convertToInline() 
-		}
-       	editor.focus()
-    }}, "all inline"],
-
-    ["br"],
-    ["hr"],
-    ["button", {onclick: function() {
-       	findNext(inlineEqStartReg)
-       	editor.focus()
-    }}, "next broken"],
-    ["button", {onclick: function() {
-       	findNext(/^\s*\(\d+\.\d+\.\d+\w*\)\s*$/gmi)
-       	editor.focus()
-    }}, "next empty"],
-
-	["br"],
-    ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(displayEqReg) && max-- >0) {
-			convertToDisplay()
-		}
-       	editor.focus()
-    }}, "all display"],
-
     ["br"],
 
 
-	// ["button", {onclick: function() {
-       
-	//    convertNumbers()
-	//   	editor.focus() 
-   	// }}, "convert numbers to refs"],  
 
 	["button", {onclick: function() {
 		replaceEqRef() 
@@ -521,7 +495,7 @@ dom.buildDom([
     \\centering
     \\begin{${pageType}}{.45\\textwidth}
         \\centering
-        \\includegraphics[width=.9\\linewidth]{fig_${number}.eps}
+        \\includegraphics[width=.9\\linewidth]{fig_${number}}
         \\caption{ 
             ${caption} 
         }
@@ -529,7 +503,7 @@ dom.buildDom([
     \\end{${pageType}}
     \\begin{${pageType}}{.45\\textwidth}
         \\centering
-        \\includegraphics[width=.9\\linewidth]{fig_${number2}.eps}
+        \\includegraphics[width=.9\\linewidth]{fig_${number2}}
         \\caption{
             ${caption2}
         }
@@ -539,7 +513,7 @@ dom.buildDom([
          } else {
         var replacement = `\\begin{figure}[h]
     \\centering
-    \\includegraphics[scale=.4]{fig_${number}.eps}
+    \\includegraphics[scale=.4]{fig_${number}}
     \\caption{
         ${caption}
     }
@@ -589,43 +563,6 @@ dom.buildDom([
     ["hr"],
  
 
-    //  ["button", {onclick: function() {
-    //     var line = editor.getSelectedText()
-    //     var replacement = `\\begin{subequations}\n${line}\n\\end{subequations}`
-    //     console.log(replacement)
-    //      editor.insert(replacement)
-    //      editor.renderer.scrollCursorIntoView(null, 0.5)
-    //    editor.focus()
-    // }}, "subequations"],    
-    // ["button", {onclick: function() {
-    //     findNext(/eq\d+_\d+_\d+[^\d\}]+/g, /\\begin{subequations[\s\S]*?\\end{subequations/g)
-    //     editor.focus()         
-    // }}, "next"],
-    ["br"],
-
-    // ["button", {onclick: function() {        
-    //     var figureRe = /(?<!\\)\b(sh|ch|exp)\b/g
-    //     var line = editor.getSelectedText()  
-    //     var match = figureRe.exec(line)
-    //     var figName = match[1]  
-    //     var replacement = "\\" + figName
-    //     editor.insert(replacement)
-    //     editor.renderer.scrollCursorIntoView(null, 0.5)
-    //     editor.focus()
-    //     editor.focus()
-    // }}, "sh|ch"],
-    
-    // ["button", {onclick: function() {
-    //    findNext(/(?<!(?:\\|\\operatorname\{))\b(sh|ch|exp)\b/g)
-    //    editor.focus()
-    // }}, "next"],
-    
-    // ["br"],
-
-    //  ["button", {onclick: function() {
-    //    findNext(inlineEqStartReg)
-    //    editor.focus()
-    // }}, "check eq refs"],
     ["br"],
     ["button", {onclick: function() {
        	findNext(/[^\x00-\xff\s]/g)
@@ -715,7 +652,7 @@ dom.buildDom([
     
     ["hr"],
     
-    ["button", {onclick: importTableFromHTML}, "import table"]
+    ["button", {onclick: importTableFromHTML}, "import table"],
     
 
 
@@ -739,6 +676,35 @@ dom.buildDom([
         editor.renderer.scrollCursorIntoView(null, 0.5)
         editor.focus()
     }}, "longtable"],
+
+
+	["hr"],
+
+    ["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(eqRegStrict) && max-- >0) {
+			replaceNumberedEquation() 
+		}
+    }}, "all numb"],
+    ["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(displayEqReg) && max-- >0) {
+			convertToDisplay()
+		}
+       	editor.focus()
+    }}, "all display"],
+
+	["button", {onclick: function() {
+		editor.selection.moveTo(0, 0)
+		var max = 10000
+       	while(findNext(inlineEqReg) && max-- >0) {
+			convertToInline() 
+		}
+       	editor.focus()
+    }}, "all inline"],
+
 
 ], sidePanel)
 
@@ -801,6 +767,8 @@ function initialize() {
     v1 = v1.replace(/∇/g, "\\nabla ")
     v1 = v1.replace(/\xa0/g, " ")
 
+    v1 = v1.replace(/(\n[ \t]*){5,}/g, "\n\n\n\n\n")
+
 
     if (!/begin\{document}/.test(v1)) {
         v1=`\\documentclass[12pt,a4paper]{article}
@@ -829,8 +797,13 @@ function initialize() {
 % \\numberwithin{equation}{section}
 
 
-\\title{ <Title here> }
-\\author{ <author1> \\and <author2> }
+\\title{ 
+    <Title here> 
+}
+\\author{ 
+    <author1>
+    \\and <author2>
+}
 
 \\begin{document}
 \\maketitle
@@ -970,12 +943,6 @@ editor.addEventListener("paste", function name(params) {
     var pastedHtml = params.event.clipboardData.getData("text/html")
     if (pastedHtml)
         html = pastedHtml;
-	/*if (html) {
-		if (confirm("do you want to automatically import pasted text")) {
-			importHtml(html)
-		}
-	}*/
-    
 })
 //https://www.tablesgenerator.com/latex_tables
 async function importTableFromHTML(htmlArg) { 
@@ -1196,6 +1163,12 @@ ${tabular}
 
 function initializeFromHTML() {
     if (!html) return alert("paste html to import")
+    html = html.replace(/<!\--\[if supportFields\]>([\s\S]*?)<!\[endif\]-\->/g, function(_, x) {
+        return x.replace(/(MACROBUTTON|SEQ)[\s\S]*?MERGEFORMAT|VM[\d:]*/g, "")
+            .replace(/\s*style=('[^']*'|"[^"]*")/g, "")
+            .replace(/<\/?span>/g, "")
+            .replace(/\s*/g, "")
+    });
     importHtml(html)
 
     var text = ""
@@ -1225,7 +1198,7 @@ function initializeFromHTML() {
             }
 
             if (tagName == "p") {
-                text += child.textContent + "\n\n"
+                text += child.textContent.trimStart() + "\n\n"
             } else {
                 text += child.textContent;
             }
@@ -1256,14 +1229,27 @@ function initializeFromHTML() {
     
     // TODO: convert all equations to inline in text instead of editor
     editor.setValue(newText);
+
+    editor.session.markUndoGroup();
+
+    initialize();
+    editor.session.markUndoGroup();
     
     editor.selection.moveTo(0, 0)
     var max = 100000
     while(findNext(inlineEqReg) && max-- >0) {
         convertToInline() 
     }
+    editor.session.markUndoGroup();
 
-    initialize();
+    // convert numbered equations
+    editor.selection.moveTo(0, 0)
+    var max = 10000
+    while(findNext(eqRegStrict) && max-- >0) {
+        replaceNumberedEquation() 
+    }
+    editor.session.markUndoGroup();
+
     div.remove();
 }
 
@@ -1286,7 +1272,7 @@ function renderPreview(text) {
         displayMode,
         macros: {
         },
-        output: "mathml"
+        output: "htmlAndMathml"
     });
     return element
 }
@@ -1340,6 +1326,27 @@ docTooltip.setDataProvider(function(e, editor) {
 });
 
 docTooltip.addToEditor(editor)
+
+
+
+var diffView = null;
+function toggleDiffView() {
+    if (diffView) {
+        diffView.detach();
+        diffView.destroy();
+        diffView = null;
+    } else {
+        json = editor.session.toJSON() 
+        var ssession = ace.createEditSession(json.value, json.mode)
+        s.getUndoManager().fromJSON(json.history)
+
+        diffView.editorB.container.style.flex=1
+        diffView = require("ace/ext/diff").createDiffView({
+            editorA: editor , sessionB: s
+        })
+    }
+
+}
 
 </script>
 
@@ -1417,4 +1424,3 @@ editor.session.
 
 -->
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.js"></script>
