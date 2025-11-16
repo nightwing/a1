@@ -26,6 +26,63 @@ see (Fig.1) for explanation
 ${{\gamma }_{1}}=\frac{1}{2\pi }\arg ,$ (1.2)
 
 
+\begin{table}[!h]
+\centering
+\caption{
+${{\bar{\sigma }}_{R\left( \upsilon  \right)}}={{\varphi }_{9}}\left( lg{{{\bar{N}}}_{G\left( \upsilon  \right)}} \right)$ is the regression equation of the function
+}
+\label{tab:1}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+№	&	${{d}_{i}}$, mm	&	$\Delta {{h}_{i}}$, mm	&	${{\bar{a}}_{\sigma i~~}}$	&	Regression equation	&	${{R}^{2}}$\\ 
+ \hline
+1	&	7,5	&	\multirow{4}{*}{0}	&	1,00	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=290,19x-1442,00$	&	0,965\\ 
+ \cline{1-2}
+\cline{4-6}
+2	&	10,0	&		&	1,25	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=405,01x-2196,80$	&	0,977\\ 
+ \cline{1-2}
+\cline{4-6}
+3	&	15,0	&		&	1,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=366,12x-2017,60$	&	0,985\\ 
+ \cline{1-2}
+\cline{4-6}
+4	&	20,0	&		&	2,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=373,32x-2155,40$	&	0,958\\ 
+ \hline
+5	&	7,5	&	\multirow{4}{*}{0,05}	&	1,00	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=-6049,10{{x}^{2}}+73903,00x-225290,00$	&	0,988\\ 
+ \cline{1-2}
+\cline{4-6}
+6	&	10,0	&		&	1,25	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=119,00x-377,80$	&	0,914\\ 
+ \cline{1-2}
+\cline{4-6}
+7	&	15,0	&		&	1,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=204,67x-936,46$	&	0,995\\ 
+ \cline{1-2}
+\cline{4-6}
+8	&	20,0	&		&	2,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=222,28x-1130,8$	&	0,986\\ 
+ \hline
+9	&	7,5	&	\multirow{4}{*}{0,10}	&	1,00	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=188,86x-718,04$	&	0,974\\ 
+ \cline{1-2}
+\cline{4-6}
+10	&	10,0	&		&	1,25	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=95,86x-228,18$	&	0,986\\ 
+ \cline{1-2}
+\cline{4-6}
+11	&	15,0	&		&	1,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=286,24x-1412,60$	&	0,972\\ 
+ \cline{1-2}
+\cline{4-6}
+12	&	20,0	&		&	2,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=206,93x-1027,00$	&	0,950\\ 
+ \hline
+13	&	7,5	&	\multirow{4}{*}{0,15}	&	1,00	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=127,64x-339,85$	&	0,998\\ 
+ \cline{1-2}
+\cline{4-6}
+14	&	10,0	&		&	1,25	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=218,61x-953,18$	&	0,986\\ 
+ \cline{1-2}
+\cline{4-6}
+15	&	15,0	&		&	1,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=219,71x-978,17$	&	0,979\\ 
+ \cline{1-2}
+\cline{4-6}
+16	&	20,0	&		&	2,75	&	${{\bar{\sigma }}_{R\left( \upsilon  \right)}}=181,96x-852,66$	&	0,992\\ 
+ \hline
+ \end{tabular}
+\end{table}
+
 References
 
 1. Galin L.A. Contact problems of the theory of elasticity and viscoelasticity.-M.: Nauka, 1980.- 304 p. (In Russian)
@@ -95,7 +152,7 @@ function applyInclusionRe(value, inclusionRe) {
     var newValue = ""
     var lastIndex = 0
     while((m = inclusionRe.exec(value))) {
-        newValue += value.slice(lastIndex, m.index).replace(/./g, " ")
+        newValue += "\x01".repeat(m.index - lastIndex)
         newValue += m[0]
         lastIndex = m.index + m[0].length
     }
@@ -163,7 +220,7 @@ var numberReg =/(\(\d+(?:\.[\d.]*)?\w*\))/g
 var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
 
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
-var inlineEqStartReg=/^\s*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
+var inlineEqStartReg=/^[ \t]*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\]/gm 
 
 var eqAndBibExclusionRe = /\\begin{(equation|tabular|figure)[\s\S]*?\\end{\1|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
 
@@ -248,7 +305,12 @@ dom.buildDom([
        initialize()
        findNext(/^\s*(References|Literature|литература)/mi)
     }}, "initialize"],   
-
+"      \x1a     \x1a \x1a  ",
+["button", {onclick: function() {
+       
+       initializeFromHTML()
+       findNext(/^\s*(References|Literature|литература)/mi)
+    }}, "from html"],   
     
     ["hr"], // bibliography
 
@@ -434,6 +496,95 @@ dom.buildDom([
 		console.log(max)
     }}, "all"],
 
+
+
+    ["hr"],
+	"Tables and Figures",
+    ["br"],
+
+    ["button", {onclick: function() {
+        var figureRe = /(?:FIGURE|Fig|фиг)\.?\s*(\d[\d.]*\w?)(.*)/i
+        var line = editor.getSelectedText().replace(/\n/g, " ")
+        var match = figureRe.exec(line)
+        var number = formatRefNumber(match[1])
+        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
+
+        if (figureRe.test(caption)) {
+            var match2 = figureRe.exec(caption)
+            var number2 = formatRefNumber(match2[1])
+            var caption2 =  match2[2].trim().replace(/^}|\\textbf{}/g, "").trim()
+            caption = caption.slice(0, match2.index).trim()
+
+            var pageType = /[^\d]$/.test(number) ? "subfigure" : "minipage"
+    
+            var replacement = `\\begin{figure}[h]
+    \\centering
+    \\begin{${pageType}}{.45\\textwidth}
+        \\centering
+        \\includegraphics[width=.9\\linewidth]{fig_${number}.eps}
+        \\caption{ 
+            ${caption} 
+        }
+        \\label{fig_${number}}
+    \\end{${pageType}}
+    \\begin{${pageType}}{.45\\textwidth}
+        \\centering
+        \\includegraphics[width=.9\\linewidth]{fig_${number2}.eps}
+        \\caption{
+            ${caption2}
+        }
+        \\label{fig_${number2}}
+    \\end{${pageType}}
+\\end{figure}`
+         } else {
+        var replacement = `\\begin{figure}[h]
+    \\centering
+    \\includegraphics[scale=.4]{fig_${number}.eps}
+    \\caption{
+        ${caption}
+    }
+    \\label{fig_${number}}
+\\end{figure}`
+        }
+
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "figure"],
+
+    ["button", {onclick: function() {
+        findNext(/(FIGURES?|FIG|TABLES?|TAB|фиг(?:ура)?|Таб(?:лица)?)\.?\s*\d[\d\.]*[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
+        editor.focus()
+        updateSearch()
+    }}, "next"],
+    ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
+    ["button", {onclick: function() {
+        
+        var figureRe = /((?:FIGURES?|FIG|TABLES?|TAB|фиг(?:ура)?|Таб(?:лица)?)\.?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/ig
+        var line = editor.getSelectedText().replace(/\n/g, " ")
+        if (line.slice(-1) == ".") {
+            line = line.slice(0,-1)
+            var r = editor.selection.getRange(); r.end.column--; editor.selection.setRange(r) 
+        }
+        
+        var match = figureRe.exec(line)
+        var figName = match[1]
+        var number = formatRefNumber(match[2])
+        var link = match[3]
+        var number2 = formatRefNumber(match[4] || "")
+
+        var identifier = /fig|фиг/.test(figName) ? "fig_" : "tab:"
+
+        var replacement = figName + " \\ref{" + identifier + number + "}"
+
+        if (number2) replacement += (link == "-" ? "-" : link == ","? ", " : " " + link + " ") + "\\ref{" + identifier + number2 + "}"
+        
+        editor.insert(replacement)
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "ref"],
+
+
 	["br"],
     ["hr"],
  
@@ -489,124 +640,6 @@ dom.buildDom([
        	editor.focus()
     }}, "next paragraph"],
     ["br"],
-
-    ["button", {onclick: function() {
-        var line = editor.getSelectedText()
-        var match = /[^\d]*([\d.]+)(.*)([\s\S]*)/g.exec(line)
-        var number = formatRefNumber(match[1])
-        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "")
-        var tabular = match[3]
-        
-        var rows = tabular.trim().split("\n");
-        var l 
-        rows.forEach(function(x) {
-            if (l == null) l = x.split("\t").length
-        })
-
-        tabular = "\\begin{tabular}{|" +  "c| ".repeat(l) + "}\\hline \n"  
-            + rows.map(x=>x.replace(/\t/g, " & ")).join("\\\\ \\hline \n")
-            + "\\\\ \\hline \n \\end{tabular}"
-
-        var replacement = `\\begin{table}[!h]
-\\centering
-\\caption{
-${caption}
-}
-\\label{tab:${number}}
-
-${tabular}
-\\end{table}`
-
-        editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        editor.focus()
-    }}, "table"],
-
-    ["button", {onclick: function() {
-        // (\\begin{tabular[\s\S]*?\\end{tabular})
-        findNext(/(TAB(LE)|Таблица)?\s*([\d.]+)([\S\s]*?)/gi)
-        editor.focus()
-        updateSearch()
-    }}, "next"],
-    ["br"],
-
-    ["button", {onclick: function() {
-        var figureRe = /(?:FIGURE|Fig|фиг)?\.?\s*([\d.]+\w?)(.*)/i
-        var line = editor.getSelectedText().replace(/\n/g, " ")
-        var match = figureRe.exec(line)
-        var number = formatRefNumber(match[1])
-        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
-
-        if (figureRe.test(caption)) {
-            var match2 = figureRe.exec(caption)
-            var number2 = formatRefNumber(match2[1])
-            var caption2 =  match2[2].trim().replace(/^}|\\textbf{}/g, "").trim()
-            caption = caption.slice(0, match2.index).trim()
-
-            var pageType = /[^\d]$/.test(number) ? "subfigure" : "minipage"
-    
-            var replacement = `\\begin{figure}[h]
-\\centering
-\\begin{${pageType}}{.45\\textwidth}
-  \\centering
-  \\includegraphics[width=.9\\linewidth]{fig_${number}.eps}
-  \\caption{ ${caption} }
-  \\label{fig_${number}}
-\\end{${pageType}}
-\\begin{${pageType}}{.45\\textwidth}
-  \\centering
-  \\includegraphics[width=.9\\linewidth]{fig_${number2}.eps}
-  \\caption{ ${caption2} }
-  \\label{fig_${number2}}
-\\end{${pageType}}
-\\end{figure}`
-         } else {
-         
-        var replacement = `\\begin{figure}[h]
-    \\centering
-    \\includegraphics[scale=.4]{fig_${number}.eps}
-    \\caption{ ${caption} }
-    \\label{fig_${number}}
-\\end{figure}`
-        }
-
-        editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        editor.focus()
-    }}, "figure"],
-
-    ["button", {onclick: function() {
-        findNext(/(FIG(URES?|\.)?|TABLES?)\s*[\d\.]+[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
-        editor.focus()
-        updateSearch()
-    }}, "next"],
-    ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
-    ["button", {onclick: function() {
-        
-        var figureRe = /(FIG(?:URES?|\.)?|TABLES?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/i
-        var line = editor.getSelectedText().replace(/\n/g, " ")
-        if (line.slice(-1) == ".") {
-            line = line.slice(0,-1)
-            var r = editor.selection.getRange(); r.end.column--; editor.selection.setRange(r) 
-        }
-        
-        var match = figureRe.exec(line)
-        var figName = match[1]
-        var number = formatRefNumber(match[2])
-        var link = match[3]
-        var number2 = formatRefNumber(match[4] || "")
-
-        var replacement = figName + " \\ref{fig_" + number + "}"
-
-        if (number2) replacement += (link == "-" ? "-" : link == ","? ", " : " " + link + " ") + "\\ref{fig_" + number2 + "}"
-        
-        editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        editor.focus()
-         
-
-        editor.focus()
-    }}, "ref"],
 
 
     ["hr"],
@@ -685,6 +718,28 @@ ${tabular}
     ["button", {onclick: importTableFromHTML}, "import table"]
     
 
+
+    ["br"],
+
+
+    ["button", {onclick: function() {
+        var replacement = convertToTable(editor.getSelectedText())
+        if (replacement) {
+            editor.insert(replacement)
+        }
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "table"],
+
+    ["button", {onclick: function() {
+        var replacement = convertToLongTable(editor.getSelectedText())
+        if (replacement) {
+            editor.insert(replacement)
+        }
+        editor.renderer.scrollCursorIntoView(null, 0.5)
+        editor.focus()
+    }}, "longtable"],
+
 ], sidePanel)
 
 
@@ -727,6 +782,24 @@ function initialize() {
     // v1 = v1.replace(/а/g, "a")
     v1 = v1.replace(/–/g, "--")
     v1 = v1.replace(/[“”]/g, '"')
+    v1 = v1.replace(/[‘’]/g, "'")
+    v1 = v1.replace(/…/g, "\\ldots ")
+    v1 = v1.replace(/×/g, "\\times ")
+    v1 = v1.replace(/°/g, "\\degree ")
+    v1 = v1.replace(/μ/g, "\\mu ")
+    v1 = v1.replace(/≤/g, "\\leq ")
+    v1 = v1.replace(/≥/g, "\\geq ")
+    v1 = v1.replace(/≪/g, "\\ll ")
+    v1 = v1.replace(/≫/g, "\\gg ")
+    v1 = v1.replace(/≠/g, "\\neq ")
+    v1 = v1.replace(/±/g, "\\pm ")
+    v1 = v1.replace(/∑/g, "\\sum ")
+    v1 = v1.replace(/√/g, "\\sqrt ")
+    v1 = v1.replace(/∫/g, "\\int ")
+    v1 = v1.replace(/∂/g, "\\partial ")
+    v1 = v1.replace(/∞/g, "\\infty ")
+    v1 = v1.replace(/∇/g, "\\nabla ")
+    v1 = v1.replace(/\xa0/g, " ")
 
 
     if (!/begin\{document}/.test(v1)) {
@@ -926,10 +999,15 @@ async function importTableFromHTML(htmlArg) {
 	tt = div.querySelectorAll("table")
     var table = tt[0]; 
 
-    var domRows = Array.from(table.querySelectorAll(":scope>tbody>tr, :scope>thead>tr, :scope>tr"))
+    var result = readTableFromDom(table);
 
-	// todo can have both thead and tbody
-	t = tt[0].firstElementChild
+    editor.setValue(result)
+
+}
+
+function readTableFromDom(table) {
+    
+    var domRows = Array.from(table.querySelectorAll(":scope>tbody>tr, :scope>thead>tr, :scope>tr"))
 
     var tableData = []
     var columnCount = 0
@@ -1002,33 +1080,194 @@ async function importTableFromHTML(htmlArg) {
 		return cells.join("\t&\t") + "\\\\ \n " + cline + "\n"
     });
 
-
-result = `
-\\begin{table}[t]
-    \\centering
-    \\begin{tabular}{|${"c|".repeat(columnCount)}}
-    \\hline 
-        
-${texRows.join("")}
-         
-         
-    \\end{tabular}
-    \\caption{Dimensionless values of frequencies and critical forces}
-    \\label{tab:1}
-\\end{table}
-`
-
-longResult = result = `
-\\begin{longtable}[t]{|${"c|".repeat(columnCount)}}
-    \\caption{Dimensionless values of frequencies and critical forces}
-    \\label{tab:1} \\\\
-\\hline
-${texRows.join("")}\\end{longtable}
-`
-
-editor.setValue(longResult)
-
+    var result = formatTable(
+        texRows.length > 30,
+        "t",
+        "|" + "c|".repeat(columnCount),
+        "TODO: add caption",
+        "tab:0000", "\\hline\n" + texRows.join("")
+    );
+    return result;
 }
+
+function formatTable(long, placement, align, caption, label, tabular) {
+    if (long) {
+        return `\\begin{longtable}[${placement}]{${align}}
+    \\caption{
+        ${caption}
+    }
+    \\label{${label}} \\\\
+${tabular}
+\\end{longtable}
+`;
+    } else {
+        return `\\begin{table}[${placement}]
+    \\centering
+    \\caption{
+        ${caption}
+    }
+    \\label{${label}}
+    \\begin{tabular}{${ align }}
+${tabular}
+    \\end{tabular}
+\\end{table}
+`;
+    }
+}
+
+function convertToTable(text) {
+    text = text.trim();
+    var beginRe = /^\\begin{longtable}\[(\w+)\]{([clr|\s]+)}/;
+    var captionRe = /\\caption{((?:[^}$]|\$[^$]+\$)*)}\s*/;
+    var labelRe = /\\label{([^}]+)}\s*/;
+    var m1 = beginRe.exec(text);
+    if (!m1) return null;
+    var placement = m1[1];
+    var align = m1[2];
+    var m2 = captionRe.exec(text);
+    var caption = m2 ? m2[1].trim() : "";
+    var m3 = labelRe.exec(text);
+    var label = m3 ? m3[1].trim() : "";
+    var tabular = text.replace(beginRe, "")
+               .replace(captionRe, "")
+               .replace(labelRe, "")
+               .replace(/\\end{longtable}/, "")
+               .replace(/^\s*\\\\/, "")
+               .trim();
+    return formatTable(false, placement, align, caption, label, tabular);
+}
+function convertToLongTable(text) {
+    text = text.trim();
+    var mainRe = /\\begin{tabular}{([clr|\s]+)}([\s\S]*?)\\end{tabular}/;
+    var m = mainRe.exec(text);
+    if (!m) return null;
+    var tabular = m[2].trim();
+    var align = m[1];
+
+    var beginRe = /^\\begin{table}\[([\w!]+)\]/;
+    var m1 = beginRe.exec(text);
+    var placement = m1 ? m1[1] : "h";
+
+    var captionRe = /\\caption{((?:[^}$]|\$[^$]+\$)*)}\s*/;
+    var labelRe = /\\label{([^}]+)}\s*/;
+
+    var m2 = captionRe.exec(text);
+    var caption = m2 ? m2[1].trim() : "";
+    var m3 = labelRe.exec(text);
+    var label = m3 ? m3[1].trim() : "";
+
+    return formatTable(true, placement, align, caption, label, tabular);
+}
+
+function oldTable() {
+    var line = editor.getSelectedText()
+    var match = /[^\d]*([\d.]+)(.*)([\s\S]*)/g.exec(line)
+    var number = formatRefNumber(match[1])
+    var caption = match[2].trim().replace(/^}|\\textbf{}/g, "")
+    var tabular = match[3]
+    
+    var rows = tabular.trim().split("\n");
+    var l 
+    rows.forEach(function(x) {
+        if (l == null) l = x.split("\t").length
+    })
+
+    tabular = "\\begin{tabular}{|" +  "c| ".repeat(l) + "}\\hline \n"  
+        + rows.map(x=>x.replace(/\t/g, " & ")).join("\\\\ \\hline \n")
+        + "\\\\ \\hline \n \\end{tabular}"
+
+    var replacement = `\\begin{table}[!h]
+\\centering
+\\caption{
+${caption}
+}
+\\label{tab:${number}}
+
+${tabular}
+\\end{table}`
+
+    editor.insert(replacement)
+    editor.renderer.scrollCursorIntoView(null, 0.5)
+    editor.focus()
+}
+
+
+
+
+function initializeFromHTML() {
+    if (!html) return alert("paste html to import")
+    importHtml(html)
+
+    var text = ""
+
+    function readDom(div) {
+        for (var i = 0; i < div.childNodes.length; i++) {
+            var child = div.childNodes[i]
+            if (child.nodeType == Node.TEXT_NODE) {
+                text += child.textContent;
+                continue;
+            }
+
+            if (child.nodeType != Node.ELEMENT_NODE) continue
+
+
+            var tagName = child.tagName.toLowerCase() 
+            if (tagName == "style") continue
+            
+            if (tagName == "table") {
+                text += "\n\n" + readTableFromDom(child) + "\n\n"
+                continue
+            }
+
+            if (child.querySelector("table")) {
+                readDom(child)
+                continue
+            }
+
+            if (tagName == "p") {
+                text += child.textContent + "\n\n"
+            } else {
+                text += child.textContent;
+            }
+        }
+    }
+
+    readDom(div);
+
+
+    text = text.replace(/\xa0/g, " ");
+
+    var maskedText = applyInclusionRe(text, eqInclusionRe);
+
+    var offsets = []
+    maskedText.replace(/\n[ \t]*\n\s*/g, function(_, offset) {
+        offsets.push([offset, _.length]);
+    });
+    var newText = "";
+    var lastIndex = 0;
+    for (var i = 0; i < offsets.length; i++) {
+        var offset = offsets[i][0];
+        var length = offsets[i][1];
+        newText += text.slice(lastIndex, offset) + "\n";
+        lastIndex = offset + length;
+    }
+    newText += text.slice(lastIndex);
+
+    
+    // TODO: convert all equations to inline in text instead of editor
+    editor.setValue(newText);
+    
+    editor.selection.moveTo(0, 0)
+    var max = 100000
+    while(findNext(inlineEqReg) && max-- >0) {
+        convertToInline() 
+    }
+
+    initialize();
+    div.remove();
+}
+
+
 
 
 function renderPreview(text) {
@@ -1036,8 +1275,8 @@ function renderPreview(text) {
     console.log("rendering ", text)
     var displayMode = !/\$/.test(text);
 
-    text = text.replace(/^(\$|\\\[|\\begin{(equation|align)\*?})\s*/s, "")
-         .replace(/(\$|\\\]|\\end{(equation|align).*)$/s, "")
+    text = text.replace(/^(\$|\\\[|\\begin{(equation)\*?})\s*/s, "")
+         .replace(/(\$|\\\]|\\end{(equation).*)$/s, "")
          .replace(/\\label{[^}]*}/g, "")
 
     var element = document.createElement("div")
