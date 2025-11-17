@@ -1,6 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
+<script src="https://ajaxorg.github.io/ace-builds/src/ext-language_tools.js"></script>
 <script src="https://ajaxorg.github.io/ace-builds/src/ext-diff.js"></script>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css"  crossorigin="anonymous">
@@ -227,9 +228,9 @@ var numberRegUnStrict = /(\(\s*\d+(?:\.[\d.]*)?\w*\)\s*)/g
 var inlineEqReg=/ *(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$)([ ;,.]*)/g 
 var inlineEqStartReg=/(^[ \t]*(\$[^$]+\$)|\\\[(?:[^\\]|\\[^\]])+\\\](?= *\w)|(?<=\w +)\\\[(?:[^\\]|\\[^\]])+\\\])([ \t,.;]*)(\(\d+(?:\.[\d.]*)?\w*\))?/gm 
 
-var eqAndBibExclusionRe = /\\begin{(equation|tabular|figure)[\s\S]*?\\end{\1|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
+var eqAndBibExclusionRe = /\\begin{(equation\*?|tabular|figure)[\s\S]*?\\end{\1}|\$[^$]+\$|\\begin{thebibliography}[\s\S]*/g
 
-var eqInclusionRe = /\\begin{(equation|align)[\s\S]*?\\end{\1|\$[^$]+\$|\\\[(?:[^\\]|\\[^\]])+\\\]/g
+var eqInclusionRe = /\\begin{(equation\*?|align)[\s\S]*?\\end{\1}|\$[^$]+\$|\\\[(?:[^\\]|\\[^\]])+\\\]/g
 
 
 var displayEqReg=/^\s*(\$[^$]+\$)\s*$/gm
@@ -293,6 +294,37 @@ function convertToDisplay() {
 
 	var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` + (tail ? "\n" + tail : "")
 	editor.insert(replacement)
+}
+
+function mergeEquations() {
+    var line = editor.getSelectedText();
+    var m 
+    eqInclusionRe.lastIndex = 0
+    var lastIndex = 0
+    var result = ""
+    while((m = eqInclusionRe.exec(line))) {
+        var textBefore = line.slice(lastIndex, m.index)
+        if (textBefore) {
+            textBefore = ` \\text{ ${textBefore} } `.replace(/\n/g, "}\\\\\n\\text{ ")
+            result += textBefore;
+        }
+        var eqText = m[0];
+        eqText = eqText.replace(/^(\$|\\\[|\\begin{(equation)\*?})\s*/s, "")
+            .replace(/(\$|\\\]|\\end{(equation).*)$/s, "")
+            .replace(/\\label{[^}]*}/g, "")
+        result +=  eqText + " "
+        lastIndex = eqInclusionRe.lastIndex
+    }
+    var textBefore = line.slice(lastIndex);
+    if (textBefore) {
+        result += ` \\text{ ${textBefore} } `
+    }
+
+    // normalize punctuation
+    result = result.replace(/\s+([,.;:!?])/g, "$1")
+        .replace(/\\text{\s*([,.;:!?])/g, "$1 \\text{")
+
+    editor.insert("$" + result + "$");
 }
 
 function bookCitation() {
@@ -401,10 +433,14 @@ dom.buildDom([
        updateSearch()
        editor.focus()
     }}, "next"],
+    "\x1a",
+    ["button", {onclick: function() {
+        editor.insertSnippet("\\textbf{$SELECTION}")
+    }}, "bold"],
+    ["button", {onclick: function() {
+        editor.insertSnippet("\\textit{$SELECTION}")
+    }}, "italic"],
 
-
-
-    
     ["hr"],
 	"Equations",
 
@@ -705,6 +741,15 @@ dom.buildDom([
        	editor.focus()
     }}, "all inline"],
 
+    ["br"],
+	["button", {onclick: function() {
+		mergeEquations()
+       	editor.focus()
+    }}, "mergeEquations"],
+	["button", {onclick: function() {
+		editor.insertSnippet("\\begin{aligned}\n${0:$SELECTION}\n\\end{aligned}")
+       	editor.focus()
+    }}, "aligned"],
 
 ], sidePanel)
 
@@ -1205,6 +1250,13 @@ function initializeFromHTML() {
         }
     }
 
+    Array.from(div.querySelectorAll("b")).forEach(x=>{
+        if (x.textContent.startsWith("\\textbf{")) return;
+        if (/(References|Literature|литература)/i.test(x.textContent)) return;
+        if (x.textContent.trim() == "") return;
+        x.textContent = "\\textbf{" + x.textContent + "}"
+    })
+    // Array.from(div.querySelectorAll("i")).forEach(x=>x.textContent = "\\textit{" + x.textContent + "}")
     readDom(div);
 
 
