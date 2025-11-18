@@ -130,7 +130,8 @@ References
 var editor = ace.edit("example", {
     theme: "ace/theme/textmate",
     mode: "ace/mode/latex",
-    wrap: true
+    wrap: localStorage.wrap !== "false",
+    enableBasicAutocompletion: true,
 });
 
 ace.config.loadModule("ace/ext/searchbox", function (e) { 
@@ -235,6 +236,7 @@ var eqInclusionRe = /\\begin{(equation\*?|align)[\s\S]*?\\end{\1}|\$[^$]+\$|\\\[
 
 var displayEqReg=/^\s*(\$[^$]+\$)\s*$/gm
 
+var container = document.getElementById("container")
 var sidePanel = document.getElementById("sidePanel")
 if (!sidePanel) {
     sidePanel = document.createElement("div")
@@ -670,7 +672,7 @@ dom.buildDom([
     }}, "sh|ch"],
 
     ["button", {onclick: function() {
-       	findNext(shOrChReg, null, eqInclusionRe)
+       	findNext(shOrChRegLoose, null, eqInclusionRe)
        	editor.focus()
         updateSearch()
     }}, "next"],
@@ -751,10 +753,38 @@ dom.buildDom([
        	editor.focus()
     }}, "aligned"],
 
+    ["br"],
+    ["br"],
+    ["hr"],
+    "Settings:",
+    ["br"],
+    ["input", {
+        id: "wrapOption", 
+        type: "checkbox", 
+        checked: localStorage.wrap == "false" ? null : true,
+        onchange: function(e) {
+            editor.session.setOption("wrap", e.target.checked)
+            localStorage.wrap = e.target.checked
+        }
+    }],
+    ["label", {for: "wrapOption"}, "Wrap text"],
+    ["br"],
+    ["hr"],
+    ["button", {onclick: function() {
+        toggleDiffView()
+    }}, "Toggle Diff View"],
+    ["br"],
+    ["br"],
+    ["br"],
+    ["br"],
 ], sidePanel)
 
+if (localStorage.panelScrollTop) {
+    sidePanel.scrollTop = localStorage.panelScrollTop
+}
 
-var shOrChReg = /\\(?:text|operatorname){(sh|ch)} *|(?<!\\\w*)(sh|ch) */g
+var shOrChReg = /\\(?:text|operatorname){(sh|ch|cth|th|ctg|tg|arctg|sin|cos)} *|(?<!\\\w*)(sh|ch|cth|th|ctg|tg|arctg|sin|cos)\b */g
+var shOrChRegLoose = /\\(?:text|operatorname){(sh|ch|cth|th|ctg|tg|arctg|sin|cos)} *|(?<!\\\w*)(sh|ch|cth|th|ctg|tg|arctg|sin|cos) */g
 
 
 var expRe = /\\exp\s*(?:\(([^)]*)\)|\\left\(([^)]*)\\right\))/g
@@ -768,6 +798,13 @@ function replaceShOrCh() {
     var replacement;
     if (matchValue == "sh") replacement = "\\sinh ";
     if (matchValue == "ch") replacement = "\\cosh ";
+    if (matchValue == "cth") replacement = "\\coth ";
+    if (matchValue == "th") replacement = "\\tanh ";
+    if (matchValue == "ctg") replacement = "\\cot ";
+    if (matchValue == "tg") replacement = "\\tan ";
+    if (matchValue == "arctg") replacement = "\\arctan ";
+    if (matchValue == "sin") replacement = "\\sin ";
+    if (matchValue == "cos") replacement = "\\cos ";
 
     if (!replacement) return;
     editor.insert(replacement)
@@ -970,6 +1007,7 @@ window.onpagehide = function() {
 	localStorage.lastValue = editor.getValue();
 	localStorage.lastSelection = JSON.stringify(editor.selection.toJSON());
 	localStorage.scrollTop = editor.session.getScrollTop()
+    localStorage.panelScrollTop = sidePanel.scrollTop
 }
 
 
@@ -1027,6 +1065,16 @@ function readTableFromDom(table) {
         var rowData = tableData[i] || (tableData[i] = [])
         var cellIndex = 0
         Array.from(row.children).forEach(function(cell, j) {
+            // todo: nested tables
+            // todo multiline cells \begin{tabular}{@{}c@{}}line1 \\ line2 \end{tabular}
+            // or p type cells
+            // \begin{tabular}{l|p{15mm}}
+            // \hline
+            // foo & bar \newline rlz \\
+            // \hline
+            // \end{tabular}
+            // or
+            // \makecell{ line1 \\ line2 } 
             var cellData = {
                 text: cell.textContent.trim(),
                 rowSpan: cell.rowSpan,
@@ -1088,8 +1136,8 @@ function readTableFromDom(table) {
 
 		var cline = clineSpans.length == 1 && clineSpans[0][0] == 0 && clineSpans[0][1] == columnCount
             ? "\\hline"
-            : clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`).join("\n");
-		return cells.join("\t&\t") + "\\\\ \n " + cline + "\n"
+            : clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`).join(" ");
+		return cells.join("\t&\t") + "\\\\  " + cline + "\n"
     });
 
     var result = formatTable(
@@ -1108,8 +1156,7 @@ function formatTable(long, placement, align, caption, label, tabular) {
     \\caption{
         ${caption}
     }
-    \\label{${label}} \\\\
-${tabular}
+    \\label{${label}} \\\\ ${tabular}
 \\end{longtable}
 `;
     } else {
@@ -1119,8 +1166,7 @@ ${tabular}
         ${caption}
     }
     \\label{${label}}
-    \\begin{tabular}{${ align }}
-${tabular}
+    \\begin{tabular}{${ align }} ${tabular}
     \\end{tabular}
 \\end{table}
 `;
@@ -1129,7 +1175,7 @@ ${tabular}
 
 function convertToTable(text) {
     text = text.trim();
-    var beginRe = /^\\begin{longtable}\[(\w+)\]{([clr|\s]+)}/;
+    var beginRe = /^\\begin{longtable}\[(\w+)\]{([\w|\s]+)}/;
     var captionRe = /\\caption{((?:[^}$]|\$[^$]+\$)*)}\s*/;
     var labelRe = /\\label{([^}]+)}\s*/;
     var m1 = beginRe.exec(text);
@@ -1150,7 +1196,7 @@ function convertToTable(text) {
 }
 function convertToLongTable(text) {
     text = text.trim();
-    var mainRe = /\\begin{tabular}{([clr|\s]+)}([\s\S]*?)\\end{tabular}/;
+    var mainRe = /\\begin{tabular}{([\w|\s]+)}([\s\S]*?)\\end{tabular}/;
     var m = mainRe.exec(text);
     if (!m) return null;
     var tabular = m[2].trim();
@@ -1382,20 +1428,54 @@ docTooltip.addToEditor(editor)
 
 
 var diffView = null;
+var newEditor = null;
 function toggleDiffView() {
+
+    var UndoManager = ace.require("ace/undomanager").UndoManager;
+    UndoManager.prototype.toJSON = function () {
+        return {
+            $redoStack: this.$redoStack,
+            $undoStack: this.$undoStack,
+            $rev: this.$rev,
+            mark: this.mark
+        };
+    };
+    UndoManager.prototype.fromJSON = function (json) {
+        this.reset();
+        this.$undoStack = json.$undoStack;
+        this.$redoStack = json.$redoStack;
+        
+        this.$rev = json.$rev;
+        this.mark = json.mark;
+        this.$redoStackBaseRev = json.$rev;
+    };
+
+
     if (diffView) {
         diffView.detach();
-        diffView.destroy();
-        diffView = null;
+        newEditor.container.remove();
+        newEditor.destroy();
+        diffView = newEditor = null;
     } else {
-        json = editor.session.toJSON() 
-        var ssession = ace.createEditSession(json.value, json.mode)
-        s.getUndoManager().fromJSON(json.history)
+        var json = editor.session.toJSON()
 
-        diffView.editorB.container.style.flex=1
+        var session = ace.createEditSession(json.value, json.mode)
+        session.setOptions({
+            wrap: editor.session.getOption("wrap"),
+            tabSize: editor.session.getOption("tabSize"),
+            useSoftTabs: editor.session.getOption("useSoftTabs"),
+        });
         diffView = require("ace/ext/diff").createDiffView({
-            editorA: editor , sessionB: s
+            editorB: editor, 
+            sessionA: session
         })
+        newEditor = diffView.editorA;
+        // newEditor.setOption("readOnly", true);
+        newEditor.container.style.flex = 1
+        container.appendChild(newEditor.container)
+
+        json.history = JSON.parse(JSON.stringify(json.history));
+        session.getUndoManager().fromJSON(json.history)
     }
 
 }
