@@ -153,6 +153,11 @@ if (localStorage.lastValue) {
 	editor.session.setScrollTop(localStorage.scrollTop || 0)
 }
 
+function scrollIntoView() {
+    var margin = 0.2 * editor.renderer.$size.scrollerHeight
+    editor.renderer.scrollCursorIntoView(null, 0.5, {top: margin, bottom: margin})
+}
+
 function applyInclusionRe(value, inclusionRe) {
     inclusionRe.lastIndex = 0;
     var m 
@@ -191,7 +196,7 @@ function findNext(eqreg, excludeRe, inclusionRe) {
     end = editor.session.doc.indexToPosition(match.index + match[0].length) 
     editor.selection.setRange({start, end})
 
-    editor.renderer.scrollCursorIntoView(null, 0.5)
+    scrollIntoView()
     
     lastRe = eqreg
 
@@ -385,8 +390,8 @@ dom.buildDom([
 
     ["button", {onclick: function() {
         bookCitation();
-        editor.renderer.scrollCursorIntoView(null, 0.5)
-        
+        scrollIntoView();
+
         editor.focus()
     }}, "cite"],
 
@@ -425,7 +430,7 @@ dom.buildDom([
         } else {
             editor.insert(`\\section{\n    ${line}\n}\n`)
         }
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
 
         // findNext(sectionReg)
@@ -464,13 +469,13 @@ dom.buildDom([
 
     ["button", {onclick: function() {
 		convertToDisplay();
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
        	editor.focus();
     }}, "display"],
     
     ["button", {onclick: function() {
 		convertToInline()
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
        	editor.focus() 
     }}, "inline"],
 
@@ -487,7 +492,7 @@ dom.buildDom([
 
 	["button", {onclick: function() {
 		replaceEqRef() 
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "eq ref"],
 
@@ -560,7 +565,7 @@ dom.buildDom([
         }
 
         editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "figure"],
 
@@ -592,7 +597,7 @@ dom.buildDom([
         if (number2) replacement += (link == "-" ? "-" : link == ","? ", " : " " + link + " ") + "\\ref{" + identifier + number2 + "}"
         
         editor.insert(replacement)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "ref"],
 
@@ -651,7 +656,7 @@ dom.buildDom([
         // var caption = match[2].trim()
 
         // editor.insert(`\\section{ ${caption} }\n`+`\\label{part${number}}\n`)
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         
         editor.focus()
 
@@ -667,7 +672,7 @@ dom.buildDom([
 
 	["button", {onclick: function() {
 		replaceShOrCh() 
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "sh|ch"],
 
@@ -702,7 +707,7 @@ dom.buildDom([
         if (replacement) {
             editor.insert(replacement)
         }
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "table"],
 
@@ -711,7 +716,7 @@ dom.buildDom([
         if (replacement) {
             editor.insert(replacement)
         }
-        editor.renderer.scrollCursorIntoView(null, 0.5)
+        scrollIntoView()
         editor.focus()
     }}, "longtable"],
 
@@ -783,8 +788,12 @@ if (localStorage.panelScrollTop) {
     sidePanel.scrollTop = localStorage.panelScrollTop
 }
 
-var shOrChReg = /\\(?:text|operatorname){(sh|ch|cth|th|ctg|tg|arctg|sin|cos)} *|(?<!\\\w*)(sh|ch|cth|th|ctg|tg|arctg|sin|cos)\b */g
-var shOrChRegLoose = /\\(?:text|operatorname){(sh|ch|cth|th|ctg|tg|arctg|sin|cos)} *|(?<!\\\w*)(sh|ch|cth|th|ctg|tg|arctg|sin|cos) */g
+var validOpNames = "sin|cos|tan|cot|sinh|cosh|tanh|coth|arcsin|arccos|arctan|ln|log|lg|exp"
+var opNames = validOpNames + "|sh|ch|cth|th|ctg|tg|arctg|arcctg"
+var validOpNamesRe = new RegExp("^(" + validOpNames + ")$")
+function regexPattern(re) { return new RegExp(re.source.replace(/opNames/g, opNames), re.flags) }
+var shOrChReg = regexPattern(/\\(?:text|operatorname){(opNames)} *|(?<!\\\w*)\b(opNames)\b */g)
+var shOrChRegLoose = regexPattern(/\\(?:text|operatorname){(opNames)} *|(?<!\\\w*)(opNames) */g)
 
 
 var expRe = /\\exp\s*(?:\(([^)]*)\)|\\left\(([^)]*)\\right\))/g
@@ -803,8 +812,8 @@ function replaceShOrCh() {
     if (matchValue == "ctg") replacement = "\\cot ";
     if (matchValue == "tg") replacement = "\\tan ";
     if (matchValue == "arctg") replacement = "\\arctan ";
-    if (matchValue == "sin") replacement = "\\sin ";
-    if (matchValue == "cos") replacement = "\\cos ";
+    if (validOpNamesRe.test(matchValue)) replacement = `\\${matchValue} `;
+
 
     if (!replacement) return;
     editor.insert(replacement)
@@ -867,7 +876,7 @@ function initialize() {
 % \\newcommand{\\Chi}{\\mathrm{X}}
 % \\newcommand{\\Alpha}{\\mathrm{A}}
 % \\usepackage{unicode-math}
-% \\newcommand{\\sgn}{\\mathop{sgn}}
+\\newcommand{\\sgn}{\\mathop{sgn}}
 
   
 \\usepackage{caption}
@@ -901,6 +910,25 @@ ${v1}
     }
 
     if (v!=v1) editor.setValue(v1)
+
+
+    // TODO: convert all equations to inline in text instead of editor
+    editor.session.markUndoGroup();
+    
+    editor.selection.moveTo(0, 0)
+    var max = 100000
+    while(findNext(inlineEqReg) && max-- >0) {
+        convertToInline() 
+    }
+    editor.session.markUndoGroup();
+
+    // convert numbered equations
+    editor.selection.moveTo(0, 0)
+    var max = 10000
+    while(findNext(eqRegStrict) && max-- >0) {
+        replaceNumberedEquation() 
+    }
+    editor.session.markUndoGroup();
 }
 
 var eqRefReg = /\(\d+[.\d]*\w*\)/g
@@ -1028,6 +1056,7 @@ editor.addEventListener("paste", function name(params) {
         html = pastedHtml;
 })
 //https://www.tablesgenerator.com/latex_tables
+//https://www.latex-tables.com/
 async function importTableFromHTML(htmlArg) { 
     if (typeof htmlArg != "string") {
         var clipboardContents = await navigator.clipboard.read(["text/html"])
@@ -1245,7 +1274,7 @@ ${tabular}
 \\end{table}`
 
     editor.insert(replacement)
-    editor.renderer.scrollCursorIntoView(null, 0.5)
+    scrollIntoView()
     editor.focus()
 }
 
@@ -1325,28 +1354,11 @@ function initializeFromHTML() {
     newText += text.slice(lastIndex);
 
     
-    // TODO: convert all equations to inline in text instead of editor
     editor.setValue(newText);
 
     editor.session.markUndoGroup();
 
     initialize();
-    editor.session.markUndoGroup();
-    
-    editor.selection.moveTo(0, 0)
-    var max = 100000
-    while(findNext(inlineEqReg) && max-- >0) {
-        convertToInline() 
-    }
-    editor.session.markUndoGroup();
-
-    // convert numbered equations
-    editor.selection.moveTo(0, 0)
-    var max = 10000
-    while(findNext(eqRegStrict) && max-- >0) {
-        replaceNumberedEquation() 
-    }
-    editor.session.markUndoGroup();
 
     div.remove();
 }
