@@ -556,7 +556,7 @@ dom.buildDom([
          } else {
         var replacement = `\\begin{figure}[h]
     \\centering
-    \\includegraphics[scale=.4]{fig_${number}}
+    \\includegraphics[width=.45\\textwidth]{fig_${number}}
     \\caption{
         ${caption}
     }
@@ -876,7 +876,7 @@ function initialize() {
 % \\newcommand{\\Chi}{\\mathrm{X}}
 % \\newcommand{\\Alpha}{\\mathrm{A}}
 % \\usepackage{unicode-math}
-\\newcommand{\\sgn}{\\mathop{sgn}}
+\\newcommand{\\sgn}{\\operatorname{sgn}}
 
   
 \\usepackage{caption}
