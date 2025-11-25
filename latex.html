@@ -374,8 +374,8 @@ dom.buildDom([
 
 		text = text
             .replace(/^\s*(References|Literature|литература)/i, "")
-            .replace(/\n+\s*(\d+)\.?/gm, function(_, number) {
-                return "\n\n\\bibitem{book" + number +"}\n"
+            .replace(/\n+\s*(\d+)\.?\s*/gm, function(_, number) {
+                return "\n\n\\bibitem{book" + number +"}\n  "
             });
 
 		var replacement = "\\begin{thebibliography}{1}\n"
@@ -1104,10 +1104,14 @@ function readTableFromDom(table) {
             // \end{tabular}
             // or
             // \makecell{ line1 \\ line2 } 
+            // \shortstack{line1 \\ line2}
             var cellData = {
-                text: cell.textContent.trim(),
+                text: cell.innerText.trim(),
                 rowSpan: cell.rowSpan,
                 colSpan: cell.colSpan
+            }
+            if (/\n/.test(cellData.text)) {
+                cellData.text = "\\begin{tabular}{@{}c@{}}" + cellData.text.replace(/\n\s*\n/g, " \\\\ ") + "\\end{tabular}"
             }
             while (rowData[cellIndex]) cellIndex++
             rowData[cellIndex] = cellData
@@ -1318,9 +1322,9 @@ function initializeFromHTML() {
             }
 
             if (tagName == "p") {
-                text += child.textContent.trimStart() + "\n\n"
+                text += child.innerText.trim() + "\n\n"
             } else {
-                text += child.textContent;
+                text += child.innerText;
             }
         }
     }
@@ -1329,7 +1333,7 @@ function initializeFromHTML() {
         if (x.textContent.startsWith("\\textbf{")) return;
         if (/(References|Literature|литература)/i.test(x.textContent)) return;
         if (x.textContent.trim() == "") return;
-        x.textContent = "\\textbf{" + x.textContent + "}"
+        x.textContent = "\\textbf{" + x.innerText + "}"
     })
     // Array.from(div.querySelectorAll("i")).forEach(x=>x.textContent = "\\textit{" + x.textContent + "}")
     readDom(div);
