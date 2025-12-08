@@ -16151,6 +16151,9 @@ class MacroExpander {
         }
       }
     }
+    tokens.forEach(token => {
+      token.loc.realLoc = topToken.loc;
+    });
     // Concatenate expansion onto top of stack.
     this.pushTokens(tokens);
     return tokens.length;
@@ -17269,7 +17272,7 @@ class Parser {
     this.consume(); // consume command token
 
     if (name && name !== "atom" && !funcData.allowedInArgument) {
-      throw new src_ParseError("Got function '" + func + "' with no arguments" + (name ? " as " + name : ""), token);
+      console.error(new src_ParseError("Got function '" + func + "' with no arguments" + (name ? " as " + name : ""), token));
     } else if (this.mode === "text" && !funcData.allowedInText) {
       throw new src_ParseError("Can't use function '" + func + "' in text mode", token);
     } else if (this.mode === "math" && funcData.allowedInMath === false) {
@@ -17294,7 +17297,9 @@ class Parser {
     };
     const func = src_functions[name];
     if (func && func.handler) {
-      return func.handler(context, args, optArgs);
+      var result = func.handler(context, args, optArgs);
+      if (token && token.loc) result.loc = token.loc;
+      return result;
     } else {
       throw new src_ParseError("No function handler for " + name);
     }

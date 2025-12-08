@@ -3,9 +3,12 @@
 <script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
 <script src="https://ajaxorg.github.io/ace-builds/src/ext-language_tools.js"></script>
 <script src="https://ajaxorg.github.io/ace-builds/src/ext-diff.js"></script>
-
+<!-- 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css"  crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.js" crossorigin="anonymous"></script> -->
+
+<link rel="stylesheet" href="./KaTeX/dist/katex.css"  crossorigin="anonymous">
+<script defer src="./KaTeX/dist/katex.js" crossorigin="anonymous"></script> 
 
 
 <div id="container">
@@ -331,7 +334,12 @@ function mergeEquations() {
     result = result.replace(/\s+([,.;:!?])/g, "$1")
         .replace(/\\text{\s*([,.;:!?])/g, "$1 \\text{")
 
+    result = result.replace(/^\s*\\text{\s*}/gm, "")
+        .replace(/\\text{\s*}\s*(\\\\)?$/gm, "$1")
+
+    var start =editor.selection.getRange().start;
     editor.insert("$" + result + "$");
+    editor.selection.setAnchor(start.row, start.column);
 }
 
 function bookCitation() {
@@ -421,7 +429,9 @@ dom.buildDom([
     ["button", {onclick: function() {
        
         var line = editor.getSelectedText().trim()
-        sectionReg.lastIndex = 0
+        sectionReg.lastIndex = 0;
+        line = line.replace(/\\textbf{([^{}]*)}/, "$1")
+        
         var match = sectionReg.exec(line)
         if (match) {
             var number = match[1]
@@ -485,7 +495,26 @@ dom.buildDom([
         updateSearch()
     }}, "next"],
     ["br"],
+ 
 
+	["button", {onclick: function() {
+		mergeEquations()
+       	editor.focus()
+    }}, "mergeEquations"],
+	["button", {onclick: function() {
+        var text = editor.getSelectedText()
+        text = text.trim()
+        if (!/&/.test(text)) {
+            text = " & " + text.replace(/\\\\\s*\n */, "\\\\\n & ")
+        }
+        text = "\\begin{aligned}\n" + text + "\n\\end{aligned}"
+        var start = editor.selection.getRange().start
+		editor.insert(text)
+        editor.selection.setAnchor(start.row + 1, 0)
+        editor.selection.setCursor(editor.selection.cursor.row - 1, Infinity)
+       	editor.focus()
+    }}, "aligned"],
+    ["br"],
     ["br"],
 
 
@@ -520,7 +549,7 @@ dom.buildDom([
     ["br"],
 
     ["button", {onclick: function() {
-        var figureRe = /(?:FIGURE|Fig|фиг)\.?\s*(\d[\d.]*\w?)(.*)/i
+        var figureRe = /(?:FIGURE|Figs?|фиг)\.?\s*(\d[\d.]*\w?)(.*)/i
         var line = editor.getSelectedText().replace(/\n/g, " ")
         var match = figureRe.exec(line)
         var number = formatRefNumber(match[1])
@@ -570,14 +599,14 @@ dom.buildDom([
     }}, "figure"],
 
     ["button", {onclick: function() {
-        findNext(/(FIGURES?|FIG|TABLES?|TAB|фиг(?:ура)?|Таб(?:лица)?)\.?\s*\d[\d\.]*[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
+        findNext(/((?:FIG(?:URE)?S?|TAB(?:LE)?S?|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*\d[\d\.]*[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
         editor.focus()
         updateSearch()
     }}, "next"],
     ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
     ["button", {onclick: function() {
         
-        var figureRe = /((?:FIGURES?|FIG|TABLES?|TAB|фиг(?:ура)?|Таб(?:лица)?)\.?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/ig
+        var figureRe = /((?:FIG(?:URE)?S?|TAB(?:LE)?S?|TAB|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/ig
         var line = editor.getSelectedText().replace(/\n/g, " ")
         if (line.slice(-1) == ".") {
             line = line.slice(0,-1)
@@ -590,7 +619,7 @@ dom.buildDom([
         var link = match[3]
         var number2 = formatRefNumber(match[4] || "")
 
-        var identifier = /fig|фиг/.test(figName) ? "fig_" : "tab:"
+        var identifier = /fig|фиг/i.test(figName) ? "fig_" : "tab:"
 
         var replacement = figName + " \\ref{" + identifier + number + "}"
 
@@ -749,16 +778,6 @@ dom.buildDom([
     }}, "all inline"],
 
     ["br"],
-	["button", {onclick: function() {
-		mergeEquations()
-       	editor.focus()
-    }}, "mergeEquations"],
-	["button", {onclick: function() {
-		editor.insertSnippet("\\begin{aligned}\n${0:$SELECTION}\n\\end{aligned}")
-       	editor.focus()
-    }}, "aligned"],
-
-    ["br"],
     ["br"],
     ["hr"],
     "Settings:",
@@ -862,9 +881,12 @@ function initialize() {
 
 
     if (!/begin\{document}/.test(v1)) {
-        v1=`\\documentclass[12pt,a4paper]{article}
+        v1=`%\\documentclass[12pt,a4paper]{article}
+\\documentclass[a4paper,latin]{paper}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
+%\\usepackage[T2A]{fontenc}
+%\\usepackage[main=english,russian]{babel}
 \\usepackage{amsmath}
 \\usepackage{amsfonts}
 \\usepackage{amssymb}
@@ -878,7 +900,8 @@ function initialize() {
 % \\usepackage{unicode-math}
 \\newcommand{\\sgn}{\\operatorname{sgn}}
 
-  
+
+\\usepackage{subcaption}
 \\usepackage{caption}
 \\captionsetup[figure]{font=scriptsize}
 \\captionsetup[figure]{font=footnotesize}
@@ -1370,14 +1393,18 @@ function initializeFromHTML() {
 
 
 
-function renderPreview(text) {
+function renderPreview(text, range) {
     var text = text.trim();
     console.log("rendering ", text)
     var displayMode = !/\$/.test(text);
 
-    text = text.replace(/^(\$|\\\[|\\begin{(equation)\*?})\s*/s, "")
-         .replace(/(\$|\\\]|\\end{(equation).*)$/s, "")
-         .replace(/\\label{[^}]*}/g, "")
+    function sameSpace(x) {
+        return x.replace(/./g, " ")
+    }
+    text = text.replace(/^(\$|\\\[|\\begin{(equation)\*?})\s*/s, sameSpace)
+        .replace(/(\$|\\\]|\\end{(equation).*)$/s, sameSpace)
+        .replace(/\\label{[^}]*}/g, sameSpace)
+
 
     var element = document.createElement("div")
     element.style.padding = "5px"
@@ -1388,6 +1415,35 @@ function renderPreview(text) {
         },
         output: "htmlAndMathml"
     });
+
+    element.onmousedown = function(e) {
+        var loc;
+        document.elementsFromPoint(e.clientX, e.clientY).forEach(el => {
+            console.log(el, el.loc)
+            if (el.loc && !loc) loc = el.loc;   
+        })
+        if (!loc) {
+            var t = e.target; 
+            while (t && !t.loc) t = t.parentNode; 
+            var loc = t?.loc
+            console.log(loc)
+            // if (loc) debugger
+        }
+        if (loc) {
+            while (loc.realLoc) {
+                loc = loc.realLoc
+            }
+            editor.selection.setRange({
+                start: transformPos(loc.start),
+                end: transformPos(loc.end),
+            })
+        }
+    }
+
+    function transformPos(index) {
+        return editor.session.doc.indexToPosition(index + range.start.column, range.start.row)
+    }
+
     return element
 }
 
@@ -1434,7 +1490,7 @@ docTooltip.setDataProvider(function(e, editor) {
     }
 
     if (hover) {
-        var domNode = renderPreview(hover.text);
+        var domNode = renderPreview(hover.text, hover.range);
         docTooltip.showForRange(editor, hover.range, domNode, e);
     }
 });
