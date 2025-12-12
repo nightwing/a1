@@ -97,16 +97,16 @@ References
 1. Galin L.A. Contact problems of the theory of elasticity and viscoelasticity.-M.: Nauka, 1980.- 304 p. (In Russian)
 
 2. Shtaerman I.Ya. Contact problem of elasticity theory. - M.-L.: Gostekhteorizdat, 1947 - 270 p. (In Russian)
-		
-		
-	
-	</div>
+        
+        
+    
+    </div>
 </div>
 <style>
-	body {
-		margin: 0;
-	}
-	
+    body {
+        margin: 0;
+    }
+    
     #container {
         display: flex;
         height: 100vh;
@@ -120,13 +120,13 @@ References
     #sidePanel {
         background: rebeccapurple;
         overflow: auto;
-		color: white;
-		padding-left: 8px
+        color: white;
+        padding-left: 8px
     }
 
-	button {
-		margin-top: 5px;
-	}
+    button {
+        margin-top: 5px;
+    }
 
 </style>
 <script>
@@ -138,22 +138,22 @@ var editor = ace.edit("example", {
 });
 
 ace.config.loadModule("ace/ext/searchbox", function (e) { 
-	e.Search(editor);
-	editor.searchBox.searchInput.value = "" 
+    e.Search(editor);
+    editor.searchBox.searchInput.value = "" 
 });
 
 
 if (localStorage.lastValue) {
-	editor.setValue(localStorage.lastValue, -1);
-	if (localStorage.lastSelection) {
-		try {
-			let sel = JSON.parse(localStorage.lastSelection)
-			editor.selection.fromJSON(sel)
-		} catch(e) {
-			console.error(e)
-		}
-	}
-	editor.session.setScrollTop(localStorage.scrollTop || 0)
+    editor.setValue(localStorage.lastValue, -1);
+    if (localStorage.lastSelection) {
+        try {
+            let sel = JSON.parse(localStorage.lastSelection)
+            editor.selection.fromJSON(sel)
+        } catch(e) {
+            console.error(e)
+        }
+    }
+    editor.session.setScrollTop(localStorage.scrollTop || 0)
 }
 
 function scrollIntoView() {
@@ -182,9 +182,9 @@ function findNext(eqreg, excludeRe, inclusionRe) {
             return _.replace(/./g, " ")
         })
     }
-	if (inclusionRe) {
-		value = applyInclusionRe(value, inclusionRe)
-	}
+    if (inclusionRe) {
+        value = applyInclusionRe(value, inclusionRe)
+    }
 
     lastIndex = editor.session.doc.positionToIndex(editor.selection.getRange().end) 
 
@@ -208,20 +208,20 @@ function findNext(eqreg, excludeRe, inclusionRe) {
 
 function updateSearch(eqreg) {
     if (!eqreg) eqreg = lastRe
-	if (searchValue != eqreg.source) {
-		searchValue = eqreg.source
-	}
-	searchTimeout = searchTimeout || setTimeout(function() {
-		searchTimeout = null;
-		editor.searchBox.searchInput.value = eqreg.source
-		editor.searchBox.regExpOption.checked = true;
+    if (searchValue != eqreg.source) {
+        searchValue = eqreg.source
+    }
+    searchTimeout = searchTimeout || setTimeout(function() {
+        searchTimeout = null;
+        editor.searchBox.searchInput.value = eqreg.source
+        editor.searchBox.regExpOption.checked = true;
         editor.searchBox.find = function() {}
         try  {
-		    editor.searchBox.$syncOptions()
+            editor.searchBox.$syncOptions()
         } finally {
             delete editor.searchBox.find;
         }
-	})
+    })
 }
 var lastRe
 var searchValue
@@ -262,48 +262,48 @@ function formatRefNumber(str) {
 }
 
 function replaceNumberedEquation() {
-	var line = editor.getSelectedText()
-	eqReg.lastIndex = 0
-	var match = eqReg.exec(line)
-	var number = "eq" + match[3].replace(/[()]/g, "") .replace(/[\.]/g, "_")
-	var punct = match[2].trim()
-	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+    var line = editor.getSelectedText()
+    eqReg.lastIndex = 0
+    var match = eqReg.exec(line)
+    var number = "eq" + match[3].replace(/[()]/g, "") .replace(/[\.]/g, "_")
+    var punct = match[2].trim()
+    var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
-	var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
-	editor.insert(replacement)
+    var replacement = `\\begin{equation} \\label{${number}}\n${eq + punct}\n\\end{equation}`
+    editor.insert(replacement)
 }
 function convertToInline() {
-	var line = editor.getSelectedText()
-	inlineEqReg.lastIndex = 0
-	var match = inlineEqReg.exec(line)
-	var punct = match[2].trim()
+    var line = editor.getSelectedText()
+    inlineEqReg.lastIndex = 0
+    var match = inlineEqReg.exec(line)
+    var punct = match[2].trim()
     var tail = line.slice(inlineEqReg.lastIndex).trim()
-	
-	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+    
+    var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
-	var replacement = ` $${eq}$` + punct + " " + tail
-	editor.insert(replacement)
+    var replacement = ` $${eq}$` + punct + " " + tail
+    editor.insert(replacement)
 }
 function convertToDisplay() {
-	var line = editor.getSelectedText()
-	inlineEqReg.lastIndex = 0
-	var match = inlineEqReg.exec(line)
+    var line = editor.getSelectedText()
+    inlineEqReg.lastIndex = 0
+    var match = inlineEqReg.exec(line)
     var tail = line.slice(inlineEqReg.lastIndex).trim()
     // check if tail contains numbered equation
     if (tail) {
         eqReg.lastIndex = 0
-	    var match2 = eqReg.exec(line)
+        var match2 = eqReg.exec(line)
         if (match2?.[3]) {
             return replaceNumberedEquation();
         }
     }
 
-	var punct = match[2].trim()
-	
-	var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
+    var punct = match[2].trim()
+    
+    var eq = match[1].trim().replace(/^(\\\[|\$)/, "").replace(/(\\\]|\$)$/, "").trim()
 
-	var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` + (tail ? "\n" + tail : "")
-	editor.insert(replacement)
+    var replacement = `\\begin{equation*}\n${eq + punct}\n\\end{equation*}` + (tail ? "\n" + tail : "")
+    editor.insert(replacement)
 }
 
 function mergeEquations() {
@@ -343,25 +343,25 @@ function mergeEquations() {
 }
 
 function bookCitation() {
-	var line = editor.getSelectedText()
-	var match = /\[([\d\,\-\s\–]*)\]/g.exec(line)
-	var books = match[1].replace(/\s+/g, "").replace(/(\d+)(?:-+|–)(\d+)/g, function(_, a, b) {
-		a = parseInt(a)
-		b = parseInt(b)
-		if (a > b) throw a
-		var r = [] 
-		for (var  i = a; i <= b; i++) {
-			r.push(i)
-		}
-		return r.join(",") 
-	} ).replace(/\d+/g, x=>"book" + x)
-	var replacement = "\\cite{" + books +"}"
+    var line = editor.getSelectedText()
+    var match = /\[([\d\,\-\s\–]*)\]/g.exec(line)
+    var books = match[1].replace(/\s+/g, "").replace(/(\d+)(?:-+|–)(\d+)/g, function(_, a, b) {
+        a = parseInt(a)
+        b = parseInt(b)
+        if (a > b) throw a
+        var r = [] 
+        for (var  i = a; i <= b; i++) {
+            r.push(i)
+        }
+        return r.join(",") 
+    } ).replace(/\d+/g, x=>"book" + x)
+    var replacement = "\\cite{" + books +"}"
 
-	editor.insert(replacement)
+    editor.insert(replacement)
 }
 
 dom.buildDom([
-"div", {onclick: ()=> editor.focus()},	
+"div", {onclick: ()=> editor.focus()},
 ["button", {onclick: function() {
        
        initialize()
@@ -376,21 +376,24 @@ dom.buildDom([
     
     ["hr"], // bibliography
 
-	["button", {onclick: function() {
+    ["button", {onclick: function() {
         
-		var text = editor.getSelectedText()
+        var text = editor.getSelectedText()
 
-		text = text
+
+        var max = 0
+        text = text
             .replace(/^\s*(References|Literature|литература)/i, "")
             .replace(/\n+\s*(\d+)\.?\s*/gm, function(_, number) {
+                if (parseInt(number) > max) max = parseInt(number);
                 return "\n\n\\bibitem{book" + number +"}\n  "
             });
 
-		var replacement = "\\begin{thebibliography}{1}\n"
-			+ text
-			+ "\n\\end{thebibliography}"
+        var replacement = `\\begin{thebibliography}{${max}}\n`
+            + text
+            + "\n\\end{thebibliography}"
 
-		editor.insert(replacement)
+        editor.insert(replacement)
         editor.focus()
     }}, "bibliography"],
 
@@ -410,15 +413,15 @@ dom.buildDom([
         editor.focus()
     }}, "next"],
 
-	"      \x1a     \x1a \x1a  ",
+    "      \x1a     \x1a \x1a  ",
 
-	["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(/\[[\d\,\-\s\–]*\]/g, eqAndBibExclusionRe) && max-- >0) {
-			bookCitation();
-		}
-       	editor.focus()
+    ["button", {onclick: function() {
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        while(findNext(/\[[\d\,\-\s\–]*\]/g, eqAndBibExclusionRe) && max-- >0) {
+            bookCitation();
+        }
+        editor.focus()
     }}, "all"],
 
     ["br"],
@@ -459,49 +462,49 @@ dom.buildDom([
     }}, "italic"],
 
     ["hr"],
-	"Equations",
+    "Equations",
 
     ["br"],
 
     ["button", {onclick: function() {
-       	findNext(inlineEqStartReg)
-       	editor.focus()
+        findNext(inlineEqStartReg)
+        editor.focus()
     }}, "next broken"],
     "\xa0",
     ["button", {onclick: function() {
-       	findNext(eqReg)
+        findNext(eqReg)
         updateSearch()
-       	editor.focus()
+        editor.focus()
     }}, "next numbered"],
 
 
     ["br"],
 
     ["button", {onclick: function() {
-		convertToDisplay();
+        convertToDisplay();
         scrollIntoView()
-       	editor.focus();
+        editor.focus();
     }}, "display"],
     
     ["button", {onclick: function() {
-		convertToInline()
+        convertToInline()
         scrollIntoView()
-       	editor.focus() 
+        editor.focus() 
     }}, "inline"],
 
     ["button", {onclick: function() {
-       	findNext(inlineEqReg)
-       	editor.focus()
+        findNext(inlineEqReg)
+        editor.focus()
         updateSearch()
     }}, "next"],
     ["br"],
  
 
-	["button", {onclick: function() {
-		mergeEquations()
-       	editor.focus()
+    ["button", {onclick: function() {
+        mergeEquations()
+        editor.focus()
     }}, "mergeEquations"],
-	["button", {onclick: function() {
+    ["button", {onclick: function() {
         var text = editor.getSelectedText()
         text = text.trim()
         if (!/&/.test(text)) {
@@ -509,89 +512,86 @@ dom.buildDom([
         }
         text = "\\begin{aligned}\n" + text + "\n\\end{aligned}"
         var start = editor.selection.getRange().start
-		editor.insert(text)
+        editor.insert(text)
         editor.selection.setAnchor(start.row + 1, 0)
         editor.selection.setCursor(editor.selection.cursor.row - 1, Infinity)
-       	editor.focus()
+        editor.focus()
     }}, "aligned"],
     ["br"],
     ["br"],
 
 
 
-	["button", {onclick: function() {
-		replaceEqRef() 
+    ["button", {onclick: function() {
+        replaceEqRef() 
         scrollIntoView()
         editor.focus()
     }}, "eq ref"],
 
     ["button", {onclick: function() {
-       	findNext(eqRefReg, eqAndBibExclusionRe)
-       	editor.focus()
+        findNext(eqRefReg, eqAndBibExclusionRe)
+        editor.focus()
         updateSearch()
     }}, "next"],
-	"   \x1b  \x1b  \x1b  \x1b  ",
+    "   \x1b  \x1b  \x1b  \x1b  ",
 
     ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-		var data = {}
-       	while(findNext(eqRefReg, eqAndBibExclusionRe) && max-- >0) {
-			replaceEqRef(data) 
-		}
-		console.log(max)
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        var data = {}
+        while(findNext(eqRefReg, eqAndBibExclusionRe) && max-- >0) {
+            replaceEqRef(data) 
+        }
+        console.log(max)
     }}, "all"],
 
 
 
     ["hr"],
-	"Tables and Figures",
+    "Tables and Figures",
     ["br"],
 
     ["button", {onclick: function() {
         var figureRe = /(?:FIGURE|Figs?|фиг)\.?\s*(\d[\d.]*\w?)(.*)/i
         var line = editor.getSelectedText().replace(/\n/g, " ")
-        var match = figureRe.exec(line)
-        var number = formatRefNumber(match[1])
-        var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
 
-        if (figureRe.test(caption)) {
-            var match2 = figureRe.exec(caption)
-            var number2 = formatRefNumber(match2[1])
-            var caption2 =  match2[2].trim().replace(/^}|\\textbf{}/g, "").trim()
-            caption = caption.slice(0, match2.index).trim()
+        var figures = [];
+        var match = figureRe.exec(line) 
+        while(match) {
+            var number = formatRefNumber(match[1])
+            var caption = match[2].trim().replace(/^}|\\textbf{}/g, "").trim()
+            match = figureRe.exec(caption)
+            if (match) {
+                caption = caption.slice(0, match.index).trim()
+            }
+            figures.push({number, caption})
+        } 
+        var pageType = /[^\d]$/.test(figures[0].number) ? "subfigure" : "minipage"
 
-            var pageType = /[^\d]$/.test(number) ? "subfigure" : "minipage"
-    
-            var replacement = `\\begin{figure}[h]
-    \\centering
-    \\begin{${pageType}}{.45\\textwidth}
-        \\centering
-        \\includegraphics[width=.9\\linewidth]{fig_${number}}
-        \\caption{ 
-            ${caption} 
-        }
-        \\label{fig_${number}}
-    \\end{${pageType}}
-    \\begin{${pageType}}{.45\\textwidth}
-        \\centering
-        \\includegraphics[width=.9\\linewidth]{fig_${number2}}
+        
+        var width = figures.length == 1 ? 0.45 : 1; 
+        figures = figures.map(x => {
+            return `\\includegraphics[width=${width}\\textwidth]{fig_${x.number}}
         \\caption{
-            ${caption2}
+            ${x.caption}
         }
-        \\label{fig_${number2}}
-    \\end{${pageType}}
-\\end{figure}`
-         } else {
+        \\label{fig_${x.number}}`
+        })
+
+        if (figures.length > 1) {
+            var pageWidth = (0.96/ figures.length).toFixed(4)
+            figures = figures.map(x => {
+                return `\\begin{${pageType}}{${pageWidth}\\textwidth}
+        \\centering
+        ${x}
+    \\end{${pageType}}`
+            })
+        }
+        
         var replacement = `\\begin{figure}[h]
     \\centering
-    \\includegraphics[width=.45\\textwidth]{fig_${number}}
-    \\caption{
-        ${caption}
-    }
-    \\label{fig_${number}}
+    ${figures.join("\n    ")}
 \\end{figure}`
-        }
 
         editor.insert(replacement)
         scrollIntoView()
@@ -599,14 +599,14 @@ dom.buildDom([
     }}, "figure"],
 
     ["button", {onclick: function() {
-        findNext(/((?:FIG(?:URE)?S?|TAB(?:LE)?S?|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*\d[\d\.]*[a-z]?(?:\s*(?:and|-|,)\s*([\d\.]+[a-z]?))?/ig)
+        findNext(/((?:FIG(?:URE)?S?|TAB(?:LE)?S?|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*\d[\d\.]*[a-z]?(?:\s*(?:and|--?|,)\s*([\d\.]+[a-z]?))?/ig)
         editor.focus()
         updateSearch()
     }}, "next"],
     ["span", "\xa0\xa0\xa0\xa0\xa0\xa0"],
     ["button", {onclick: function() {
         
-        var figureRe = /((?:FIG(?:URE)?S?|TAB(?:LE)?S?|TAB|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*([\d\.]+[a-z]?)(?:\s*(and|-|,)\s*([\d\.]+[a-z]?))?/ig
+        var figureRe = /((?:FIG(?:URE)?S?|TAB(?:LE)?S?|TAB|фиг(?:ур[аы]?)?|Таб(?:лиц[аы]?)?)\.?)\s*([\d\.]+[a-z]?)(?:\s*(and|--?|,)\s*([\d\.]+[a-z]?))?/ig
         var line = editor.getSelectedText().replace(/\n/g, " ")
         if (line.slice(-1) == ".") {
             line = line.slice(0,-1)
@@ -631,14 +631,14 @@ dom.buildDom([
     }}, "ref"],
 
 
-	["br"],
+    ["br"],
     ["hr"],
  
 
     ["br"],
     ["button", {onclick: function() {
-       	findNext(/[^\x00-\xff\s]/g)
-       	editor.focus()
+        findNext(/[^\x00-\xff\s]/g)
+        editor.focus()
     }}, "next non-english"],
     ["br"],
     ["button", {onclick: function() {
@@ -646,7 +646,7 @@ dom.buildDom([
             findNext(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*\S)/g)
             var text = editor.getSelectedText()
         } while(text && !/^(\. *\n)/.test(text))
-       	editor.focus()
+        editor.focus()
     }}, "next paragraph"],
     ["br"],
 
@@ -672,11 +672,11 @@ dom.buildDom([
         var reg = new RegExp(reg)
 
         editor.selection.moveTo(0, 0)
-		var max = 10000
-		var data = {}
-       	while(findNext(reg) && max-- >0) {
-			editor.insert(replacement)
-		} 
+        var max = 10000
+        var data = {}
+        while(findNext(reg) && max-- >0) {
+            editor.insert(replacement)
+        } 
         
         editor.selection.fromJSON(sel); 
         // sectionReg.lastIndex = 0
@@ -699,27 +699,27 @@ dom.buildDom([
 
     ["br"],
 
-	["button", {onclick: function() {
-		replaceShOrCh() 
+    ["button", {onclick: function() {
+        replaceShOrCh() 
         scrollIntoView()
         editor.focus()
     }}, "sh|ch"],
 
     ["button", {onclick: function() {
-       	findNext(shOrChRegLoose, null, eqInclusionRe)
-       	editor.focus()
+        findNext(shOrChRegLoose, null, eqInclusionRe)
+        editor.focus()
         updateSearch()
     }}, "next"],
-	"   \x1b  \x1b  \x1b  \x1b  ",
+    "   \x1b  \x1b  \x1b  \x1b  ",
 
     ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-		var data = {}
-       	while(findNext(shOrChReg, null, eqInclusionRe) && max-- >0) {
-			replaceShOrCh(data) 
-		}
-		console.log(max)
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        var data = {}
+        while(findNext(shOrChReg, null, eqInclusionRe) && max-- >0) {
+            replaceShOrCh(data) 
+        }
+        console.log(max)
     }}, "all"],
     
     ["hr"],
@@ -750,31 +750,31 @@ dom.buildDom([
     }}, "longtable"],
 
 
-	["hr"],
+    ["hr"],
 
     ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(eqRegStrict) && max-- >0) {
-			replaceNumberedEquation() 
-		}
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        while(findNext(eqRegStrict) && max-- >0) {
+            replaceNumberedEquation() 
+        }
     }}, "all numb"],
     ["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(displayEqReg) && max-- >0) {
-			convertToDisplay()
-		}
-       	editor.focus()
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        while(findNext(displayEqReg) && max-- >0) {
+            convertToDisplay()
+        }
+        editor.focus()
     }}, "all display"],
 
-	["button", {onclick: function() {
-		editor.selection.moveTo(0, 0)
-		var max = 10000
-       	while(findNext(inlineEqReg) && max-- >0) {
-			convertToInline() 
-		}
-       	editor.focus()
+    ["button", {onclick: function() {
+        editor.selection.moveTo(0, 0)
+        var max = 10000
+        while(findNext(inlineEqReg) && max-- >0) {
+            convertToInline() 
+        }
+        editor.focus()
     }}, "all inline"],
 
     ["br"],
@@ -852,7 +852,10 @@ function initialize() {
     var v=editor.getValue();
     var v1=v.replace(/’/g, "'").replace(/β/g, '$\beta$')
 
-    v1 = v1.replace(/(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*[^\s}\])$])/g, function(a,_,b) { if(b) return b + "\n"; return a })
+    v1 = v1.replace(
+        /(\\\[(?:[^\\]|\\[^\]])+\\\]|\$[^$]+\$|\\begin{equation[\s\S]*?\\end{equation)|(\. *\n)(?=[ \t]*[^\s}\])$])/g, 
+        function(a,_,b) { if(b) return b + "\n"; return a }
+    )
     v1 = v1.replace(/{align}/g, "{aligned}")
     v1 = v1.replace(/(?<!\\)%/g, "\\%")
     // v1 = v1.replace(/а/g, "a")
@@ -862,7 +865,7 @@ function initialize() {
     v1 = v1.replace(/…/g, "\\ldots ")
     v1 = v1.replace(/×/g, "\\times ")
     v1 = v1.replace(/°/g, "\\degree ")
-    v1 = v1.replace(/μ/g, "\\mu ")
+    v1 = v1.replace(/μ/g, "\\mu ") // TODO \textmu
     v1 = v1.replace(/≤/g, "\\leq ")
     v1 = v1.replace(/≥/g, "\\geq ")
     v1 = v1.replace(/≪/g, "\\ll ")
@@ -877,7 +880,7 @@ function initialize() {
     v1 = v1.replace(/∇/g, "\\nabla ")
     v1 = v1.replace(/\xa0/g, " ")
 
-    v1 = v1.replace(/(\n[ \t]*){5,}/g, "\n\n\n\n\n")
+    v1 = v1.replace(/(\n[ \t]*){1,}\n/g, "\n\n")
 
 
     if (!/begin\{document}/.test(v1)) {
@@ -887,6 +890,7 @@ function initialize() {
 \\usepackage[T1]{fontenc}
 %\\usepackage[T2A]{fontenc}
 %\\usepackage[main=english,russian]{babel}
+%\\usepackage{textgreek}
 \\usepackage{amsmath}
 \\usepackage{amsfonts}
 \\usepackage{amssymb}
@@ -899,6 +903,10 @@ function initialize() {
 % \\newcommand{\\Alpha}{\\mathrm{A}}
 % \\usepackage{unicode-math}
 \\newcommand{\\sgn}{\\operatorname{sgn}}
+
+% for line breaks in table cells
+\\newcommand{\\ST}[1]{\\begin{tabular}{@{}c@{}}#1\\end{tabular}}
+
 
 
 \\usepackage{subcaption}
@@ -956,20 +964,20 @@ ${v1}
 
 var eqRefReg = /\(\d+[.\d]*\w*\)/g
 function replaceEqRef(data) {
-	if (!data) data = {}
-	var results = data.results;
-	if (!results) {
-		results = data.results = computeLabels()
-	} 
-	var e = editor.getSelectedText();
-	if (!e) return
-	var e1 = e.slice(1, -1).replace(/\./g, "_");
-	if (!results[e1]) {
-		console.log(e1)
-		editor.navigateRight()
-		return
-	}
-	var replacement = `\\eqref{eq${e1}}`
+    if (!data) data = {}
+    var results = data.results;
+    if (!results) {
+        results = data.results = computeLabels()
+    } 
+    var e = editor.getSelectedText();
+    if (!e) return
+    var e1 = e.slice(1, -1).replace(/\./g, "_");
+    if (!results[e1]) {
+        console.log(e1)
+        editor.navigateRight()
+        return
+    }
+    var replacement = `\\eqref{eq${e1}}`
     editor.insert(replacement)
 }
 
@@ -984,7 +992,7 @@ function computeLabels() {
     return results
 }
 function convertNumbers() {
-	var results = computeLabels();
+    var results = computeLabels();
     var v1 = v.replace(/\(\d+\.\d+\.\d+\w*\)/g, function(e) {
         var e1 = e.slice(1, -1).replace(/\./g, "_");
         if (!results[e1]) {
@@ -1014,7 +1022,7 @@ function fixBibliography() {
 function randomStuff() {
 
 value = "\\bibitem{book19}\n\
-	Uflyand, Ya.1968. Integral Transformations in Problems of the Elasticity Theory. Leningrad. Nauka. 402 (in Russian).   \
+    Uflyand, Ya.1968. Integral Transformations in Problems of the Elasticity Theory. Leningrad. Nauka. 402 (in Russian).   \
 "
 
 value.replace(/(\\bibitem{book\d+}\s*)([^\d\\\n]+)(\d+).?\s*/g, function(_, intro, names, number) {
@@ -1055,20 +1063,20 @@ function removeAlignement() {
 }
 
 window.onpagehide = function() {
-	localStorage.lastValue = editor.getValue();
-	localStorage.lastSelection = JSON.stringify(editor.selection.toJSON());
-	localStorage.scrollTop = editor.session.getScrollTop()
+    localStorage.lastValue = editor.getValue();
+    localStorage.lastSelection = JSON.stringify(editor.selection.toJSON());
+    localStorage.scrollTop = editor.session.getScrollTop()
     localStorage.panelScrollTop = sidePanel.scrollTop
 }
 
 
 
 function importHtml(html) {
-	if (div) div.remove()
-	div = document.createElement("div")
+    if (div) div.remove()
+    div = document.createElement("div")
     div.innerHTML = html 
     console.log(html)
-	document.body.appendChild(div)
+    document.body.appendChild(div)
 }
 
 var html, div
@@ -1098,7 +1106,7 @@ async function importTableFromHTML(htmlArg) {
     importHtml(html)
     
     
-	tt = div.querySelectorAll("table")
+    tt = div.querySelectorAll("table")
     var table = tt[0]; 
 
     var result = readTableFromDom(table);
@@ -1134,7 +1142,7 @@ function readTableFromDom(table) {
                 colSpan: cell.colSpan
             }
             if (/\n/.test(cellData.text)) {
-                cellData.text = "\\begin{tabular}{@{}c@{}}" + cellData.text.replace(/\n\s*\n/g, " \\\\ ") + "\\end{tabular}"
+                cellData.text = "\\ST{" + cellData.text.replace(/\n\s*\n/g, " \\\\ ") + "}"
             }
             while (rowData[cellIndex]) cellIndex++
             rowData[cellIndex] = cellData
@@ -1163,9 +1171,9 @@ function readTableFromDom(table) {
     });
 
     var texRows = tableData.map(rowData => {
-		var cells = [];
-		var clineSpans = []
-		var clineStart = 0
+        var cells = [];
+        var clineSpans = []
+        var clineStart = 0
         for (var j = 0; j < rowData.length; j++) {
             var cellData = rowData[j];
             if (cellData == "<<") {
@@ -1186,14 +1194,14 @@ function readTableFromDom(table) {
             }
             cells.push(cellText)
         }
-		if (clineStart < j) {
-			clineSpans.push([clineStart, j])
-		}
+        if (clineStart < j) {
+            clineSpans.push([clineStart, j])
+        }
 
-		var cline = clineSpans.length == 1 && clineSpans[0][0] == 0 && clineSpans[0][1] == columnCount
+        var cline = clineSpans.length == 1 && clineSpans[0][0] == 0 && clineSpans[0][1] == columnCount
             ? "\\hline"
             : clineSpans.map(x=>`\\cline{${x[0]+1}-${x[1]}}`).join(" ");
-		return cells.join("\t&\t") + "\\\\  " + cline + "\n"
+        return cells.join("\t&\t") + "\\\\  " + cline + "\n"
     });
 
     var result = formatTable(
